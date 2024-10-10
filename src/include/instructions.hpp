@@ -48,6 +48,7 @@ enum class InstructionType {
     PUSH,  POP,  CALL,
     RET,   NOP,  HALT,
     STOP,  EI,   DI,
+    RST,
 };
 
 class Instruction {
@@ -70,12 +71,6 @@ private:
 public:
     Instruction() = default;
     ~Instruction() = default;
-
-    // Instruction(const Instruction&) = default;
-    // Instruction& operator=(const Instruction&) = default;
-
-    // Instruction(Instruction&&) = default;
-    // Instruction& operator=(Instruction&&) = default;
 
     Instruction(shared_ptr<Registers> regs_ptr)
         : registers(regs_ptr) {}
@@ -125,7 +120,7 @@ public:
     void srl_inst(u8 value);         void rr_inst(u8 value);          void rl_inst(u8 value);
     void rrc_inst(u8 value);         void rlc_inst(u8 value);         void sra_inst(u8 value);
     void sla_inst(u8 value);         void swap_inst(u8 value);
-    void jp_inst(bool should_jump);
+    void jp_inst(bool should_jump);  void rst_inst();
     void jr_inst(bool should_jump);
     void jpi_inst();
     void ld_inst(const Instruction& instruction);

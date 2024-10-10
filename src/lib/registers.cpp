@@ -1,139 +1,139 @@
 #include "registers.hpp"
 
-// u16 Registers::get_PC() const
-// {
-//     return PC;
-// }
+auto Registers::get_PC() const noexcept -> u16
+{
+    return PC;
+}
 
-// u16 Registers::get_SP() const
-// {
-//     return SP;
-// }
+auto Registers::get_SP() const noexcept -> u16
+{
+    return SP;
+}
 
-// void Registers::set_PC(u16 value)
-// {
-//     PC = value;
-// }
+auto Registers::set_PC(u16 value) -> void
+{
+    PC = value;
+}
 
-// void Registers::set_SP(u16 value)
-// {
-//     SP = value;
-// }
+auto Registers::set_SP(u16 value) -> void
+{
+    SP = value;
+}
 
-// u8 Registers::get_a() const
-// {
-//     return a;
-// }
-// u8 Registers::get_b() const
-// {
-//     return b;
-// }
-// u8 Registers::get_c() const
-// {
-//     return c;
-// }
-// u8 Registers::get_d() const
-// {
-//     return d;
-// }
-// u8 Registers::get_e() const
-// {
-//     return e;
-// }
-// u8 Registers::get_f() const
-// {
-//     return f;
-// }
-// u8 Registers::get_h() const
-// {
-//     return h;
-// }
-// u8 Registers::get_l() const
-// {
-//     return l;
-// }
+auto Registers::get_a() const noexcept -> u8
+{
+    return a;
+}
+auto Registers::get_b() const noexcept -> u8
+{
+    return b;
+}
+auto Registers::get_c() const noexcept -> u8
+{
+    return c;
+}
+auto Registers::get_d() const noexcept -> u8
+{
+    return d;
+}
+auto Registers::get_e() const noexcept -> u8
+{
+    return e;
+}
+auto Registers::get_f() const noexcept -> u8
+{
+    return f;
+}
+auto Registers::get_h() const noexcept -> u8
+{
+    return h;
+}
+auto Registers::get_l() const noexcept -> u8
+{
+    return l;
+}
 
-// void Registers::set_a(u8 value)
-// {
-//     a = value;
-// }
-// void Registers::set_b(u8 value)
-// {
-//     b = value;
-// }
-// void Registers::set_c(u8 value)
-// {
-//     c = value;
-// }
-// void Registers::set_d(u8 value)
-// {
-//     d = value;
-// }
-// void Registers::set_e(u8 value)
-// {
-//     e = value;
-// }
-// void Registers::set_f(u8 value)
-// {
-//     f = value;
-// }
-// void Registers::set_h(u8 value)
-// {
-//     h = value;
-// }
-// void Registers::set_l(u8 value)
-// {
-//     l = value;
-// }
+auto Registers::set_a(u8 value) -> void
+{
+    a = value;
+}
+auto Registers::set_b(u8 value) -> void
+{
+    b = value;
+}
+auto Registers::set_c(u8 value) -> void
+{
+    c = value;
+}
+auto Registers::set_d(u8 value) -> void
+{
+    d = value;
+}
+auto Registers::set_e(u8 value) -> void
+{
+    e = value;
+}
+auto Registers::set_f(u8 value) -> void
+{
+    f = value;
+}
+auto Registers::set_h(u8 value) -> void
+{
+    h = value;
+}
+auto Registers::set_l(u8 value) -> void
+{
+    l = value;
+}
 
-// u16 Registers::get_AF() const
-// {
-//     return static_cast<u16>(a) << 8 | f;
-// }
+auto Registers::get_AF() const noexcept -> u16
+{
+    return static_cast<u16>(a) << 8 | f;
+}
 
-// u16 Registers::get_BC() const
-// {
-//     return static_cast<u16>(b) << 8 | c;
-// }
+auto Registers::get_BC() const noexcept -> u16
+{
+    return static_cast<u16>(b) << 8 | c;
+}
 
-// u16 Registers::get_DE() const
-// {
-//     return static_cast<u16>(d) << 8 | e;
-// }
+auto Registers::get_DE() const noexcept -> u16
+{
+    return static_cast<u16>(d) << 8 | e;
+}
 
-// u16 Registers::get_HL() const
-// {
-//     return static_cast<u16>(h) << 8 | l;
-// }
+auto Registers::get_HL() const noexcept -> u16
+{
+    return static_cast<u16>(h) << 8 | l;
+}
 
-// void Registers::set_AF(u16 value)
-// {
-//     a = static_cast<u8>((value & 0xFF00) >> 8);
-//     f = static_cast<u8>(value & 0xFF);
-// }
+auto Registers::set_AF(u16 value) -> void
+{
+    a = static_cast<u8>((value & 0xFF00) >> 8);
+    f = static_cast<u8>(value & 0xFF);
+}
 
-// void Registers::set_BC(u16 value)
-// {
-//     b = static_cast<u8>((value & 0xFF00) >> 8);
-//     c = static_cast<u8>(value & 0xFF);
-// }
+auto Registers::set_BC(u16 value) -> void
+{
+    b = static_cast<u8>((value & 0xFF00) >> 8);
+    c = static_cast<u8>(value & 0xFF);
+}
 
-// void Registers::set_DE(u16 value)
-// {
-//     d = static_cast<u8>((value & 0xFF00) >> 8);
-//     e = static_cast<u8>(value & 0xFF);
-// }
+auto Registers::set_DE(u16 value) -> void
+{
+    d = static_cast<u8>((value & 0xFF00) >> 8);
+    e = static_cast<u8>(value & 0xFF);
+}
 
-// void Registers::set_HL(u16 value)
-// {
-//     h = static_cast<u8>((value & 0xFF00) >> 8);
-//     l = static_cast<u8>(value & 0xFF);
-// }
+auto Registers::set_HL(u16 value) -> void
+{
+    h = static_cast<u8>((value & 0xFF00) >> 8);
+    l = static_cast<u8>(value & 0xFF);
+}
 
 auto Registers::read_next_byte() -> u8
 {
-    u8 byte = get_bus()->read_byte(PC);
     PC += 1;
+    u8 byte = get_bus()->read_byte(PC);
     return byte;
 }
 
@@ -179,11 +179,8 @@ auto Registers::set_register(ArithmeticTarget target, u8 value) -> void
         case ArithmeticTarget::H: h = value; break;
         case ArithmeticTarget::L: l = value; break;
         case ArithmeticTarget::HLI: bus->write_byte(get_HL(), value); break;
-        default: {
-            ostringstream error_message;
-            error_message << "Unknown target at set_register: " << static_cast<int>(target);
-            throw runtime_error(error_message.str());
-        }
+        default:
+            throw runtime_error("Unknown target at set_register: " + to_string(static_cast<int>(target)));
     }
 }
 
@@ -195,11 +192,9 @@ auto Registers::get_register_pair(ArithmeticTarget target) const -> u16
         case ArithmeticTarget::DE: return get_DE();
         case ArithmeticTarget::HL: return get_HL();
         case ArithmeticTarget::AF: return get_AF();
-        default: {
-            ostringstream error_message;
-            error_message << "Unknown target at get_register_pair: " << static_cast<int>(target);
-            throw runtime_error(error_message.str());
-        }
+        case ArithmeticTarget::SP: return get_SP();
+        default:
+            throw runtime_error("Unknown target at get_register_pair: " + to_string(static_cast<int>(target)));
     }
 }
 
@@ -211,10 +206,7 @@ auto Registers::set_register_pair(ArithmeticTarget target, u16 value) -> void
         case ArithmeticTarget::DE: set_DE(value); break;
         case ArithmeticTarget::HL: set_HL(value); break;
         case ArithmeticTarget::AF: set_AF(value); break;
-        default: {
-            ostringstream error_message;
-            error_message << "Unknown target at set_register_pair: " << static_cast<int>(target);
-            throw runtime_error(error_message.str());
-        }
+        default:
+            throw runtime_error("Unknown target at set_register_pair: " + to_string(static_cast<int>(target)));
     }
 }

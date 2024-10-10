@@ -80,12 +80,68 @@ auto CPU::execute(const Instruction& instruction) -> u8
             return cycle;
 
         case InstructionType::INC:
-            inst->inc_inst(registers->get_register(instruction.get_arithmetic_target()));
+            if (instruction_byte == 0x03 || instruction_byte == 0x13 ||
+                instruction_byte == 0x23 || instruction_byte == 0x33)
+            {
+                switch (instruction_byte)
+                {
+                    case 0x03:
+                        registers->set_BC(registers->get_BC() + 1);
+                        break;
+
+                    case 0x13:
+                        registers->set_DE(registers->get_DE() + 1);
+                        break;
+
+                    case 0x23:
+                        registers->set_HL(registers->get_HL() + 1);
+                        break;
+
+                    case 0x33:
+                        registers->set_SP(registers->get_SP() + 1);
+                        break;
+
+                    default:
+                        throw runtime_error("Unkown case in INC(CPU): " + to_string(static_cast<int>(instruction_byte)));
+                }
+            }
+            else
+            {
+                inst->inc_inst(registers->get_register(instruction.get_arithmetic_target()));
+            }
             cycle = inst->get_cycle_value();
             return cycle;
-
+        
         case InstructionType::DEC:
-            inst->dec_inst(registers->get_register(instruction.get_arithmetic_target()));
+            if (instruction_byte == 0x0B || instruction_byte == 0x1B ||
+                instruction_byte == 0x2B || instruction_byte == 0x3B)
+            {
+                switch (instruction_byte)
+                {
+                    case 0x03:
+                        registers->set_BC(registers->get_BC() - 1);
+                        break;
+
+                    case 0x13:
+                        registers->set_DE(registers->get_DE() - 1);
+                        break;
+
+                    case 0x23:
+                        registers->set_HL(registers->get_HL() - 1);
+                        break;
+
+                    case 0x33:
+                        registers->set_SP(registers->get_SP() - 1);
+                        break;
+
+                    default:
+                        throw runtime_error("Unkown case in DEC(CPU): " + to_string(static_cast<int>(instruction_byte)));
+                }
+            }
+            else
+            {
+                inst->dec_inst(registers->get_register(instruction.get_arithmetic_target()));
+            }
             cycle = inst->get_cycle_value();
             return cycle;
 
@@ -256,6 +312,39 @@ auto CPU::execute(const Instruction& instruction) -> u8
             cycle = inst->get_cycle_value();
             return cycle;
 
+        case InstructionType::RST: {
+            u16 return_address = registers->get_PC() + 1;
+            push_inst(return_address);
+            switch (instruction_byte)
+            {
+                case 0xCF:
+                    registers->set_PC(0x0008);
+                    registers->set_PC(registers->get_PC() - 1);     //Prevent inc in cpu step
+                    break;
+                    
+                case 0xDF:
+                    registers->set_PC(0x0018);
+                    registers->set_PC(registers->get_PC() - 1);     //Prevent inc in cpu step
+                    break;
+                
+                case 0xEF:
+                    registers->set_PC(0x0028);
+                    registers->set_PC(registers->get_PC() - 1);     //Prevent inc in cpu step
+                    break;
+                    
+                case 0xFF:
+                    registers->set_PC(0x0038);
+                    registers->set_PC(registers->get_PC() - 1);     //Prevent inc in cpu step
+                    break;
+            
+                default:
+                    throw runtime_error("Unknown instruction_byte found at step: 0x" + to_string(instruction_byte));
+                    break;
+            }
+            cycle = inst->get_cycle_value();
+            return cycle;
+        }
+
         default:
             cerr << "Unknown instruction at execute" << endl;
             cerr << "Instruction type: " << static_cast<u16>(instruction.get_inst_type()) << endl;
@@ -268,7 +357,7 @@ auto CPU::execute(const Instruction& instruction) -> u8
 
 auto CPU::step() -> void {
     u8 cycle = 0;
-    u8 instruction_byte = registers->get_bus()->read_byte(registers->get_PC());
+    instruction_byte = registers->get_bus()->read_byte(registers->get_PC());
     bool prefixed = (instruction_byte == 0xCB);
     if (prefixed)
     {
@@ -279,7 +368,6 @@ auto CPU::step() -> void {
     {
         log_state("Before execute", instruction_byte, prefixed);
         cycle = execute(*instruction);
-        // execute(*instruction);
         registers->set_PC(registers->get_PC() + 1);
         log_state("After execute", instruction_byte, prefixed);
 
@@ -314,7 +402,8 @@ auto CPU::timer(u8 cycle) -> void
     {
         timer_clocksum += cycle * 4;
 
-        u32 freq_lut[4] = {4096, 262144, 65536, 16384};
+        // u32 freq_lut[4] = {4096, 262144, 65536, 16384}; // Should be
+        u32 freq_lut[4] = {262144, 4096, 65536, 16384};
         u32 freq = freq_lut[registers->get_bus()->read_byte(0xFF07) & 3];
 
         //Increment TIMA when enough cycles have passed

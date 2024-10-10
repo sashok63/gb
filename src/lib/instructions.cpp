@@ -1,6 +1,7 @@
 #include "instructions.hpp"
 
-u8 Instruction::add_inst(u8 value) {
+u8 Instruction::add_inst(u8 value)
+{
     u16 result = static_cast<u16>(registers->get_a()) + value;
     u8 new_value = static_cast<u8>(result);
 
@@ -12,7 +13,8 @@ u8 Instruction::add_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::adc_inst(u8 value) {
+u8 Instruction::adc_inst(u8 value)
+{
     u8 carry = registers->get_flag()->carry ? 1 : 0;
     u16 result = static_cast<u16>(registers->get_a()) + value + carry;
     u8 new_value = static_cast<u8>(result);
@@ -25,7 +27,8 @@ u8 Instruction::adc_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::sub_inst(u8 value) {
+u8 Instruction::sub_inst(u8 value)
+{
     u16 result = static_cast<u16>(registers->get_a()) - value;
     u8 new_value = static_cast<u8>(result);
 
@@ -37,7 +40,8 @@ u8 Instruction::sub_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::sbc_inst(u8 value) {
+u8 Instruction::sbc_inst(u8 value)
+{
     u16 carry = registers->get_flag()->carry ? 1 : 0;
     u16 result = static_cast<u16>(registers->get_a()) - value - carry;
     u8 new_value = static_cast<u8>(result);
@@ -50,12 +54,13 @@ u8 Instruction::sbc_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::and_inst(u8 value) {
+u8 Instruction::and_inst(u8 value)
+{
     u8 a = registers->get_a();
     u16 result = static_cast<u16>(a &= value);
     u8 new_value = static_cast<u8>(result);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = true;
     registers->get_flag()->carry = false;
@@ -63,13 +68,13 @@ u8 Instruction::and_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::or_inst(u8 value) {
+u8 Instruction::or_inst(u8 value)
+{
     u8 a = registers->get_a();
-    // u16 result = static_cast<u16>(a |= value);
     u16 result = static_cast<u16>(a | value);
     u8 new_value = static_cast<u8>(result);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = false;
@@ -77,15 +82,13 @@ u8 Instruction::or_inst(u8 value) {
     return new_value;
 }
 
-u8 Instruction::xor_inst(u8 value) {
+u8 Instruction::xor_inst(u8 value)
+{
     u8 a = registers->get_a();
-    // u16 result = static_cast<u16>(a ^= value);
     u16 result = static_cast<u16>(a ^ value);
     u8 new_value = static_cast<u8>(result);
 
-    // registers->get_flag()->zero = (registers->get_a() == 0);
     registers->get_flag()->zero = (new_value == 0);
-    // cout << "Zero flag after xor: " << boolalpha << registers->get_flag()->zero << endl;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = false;
@@ -93,7 +96,8 @@ u8 Instruction::xor_inst(u8 value) {
     return new_value;
 }
 
-void Instruction::cp_inst(u8 value) {
+void Instruction::cp_inst(u8 value)
+{
     u16 result = static_cast<u16>(registers->get_a()) - value;
 
     registers->get_flag()->zero = ((result & 0xFF) == 0);
@@ -102,7 +106,8 @@ void Instruction::cp_inst(u8 value) {
     registers->get_flag()->carry = (registers->get_a() < value);
 }
 
-void Instruction::inc_inst(u8 value) {
+void Instruction::inc_inst(u8 value)
+{
     // registers->get_flag()->half_carry = ((value & 0x0F) == 0); // Here or 
     value++;
 
@@ -111,7 +116,8 @@ void Instruction::inc_inst(u8 value) {
     registers->get_flag()->half_carry = ((value & 0x0F) == 0); // or Here
 }
 
-void Instruction::dec_inst(u8 value) {
+void Instruction::dec_inst(u8 value)
+{
     // registers->get_flag()->half_carry = ((value & 0x0F) == 0); // Here or 
     value--;
 
@@ -120,21 +126,24 @@ void Instruction::dec_inst(u8 value) {
     registers->get_flag()->half_carry = ((value & 0x0F) == 0); // or Here
 }
 
-void Instruction::ccf_inst() {
+void Instruction::ccf_inst()
+{
     registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = !registers->get_flag()->carry;
 }
 
-void Instruction::scf_inst() {
+void Instruction::scf_inst()
+{
     registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = true;
 }
 
-void Instruction::rra_inst() {
+void Instruction::rra_inst()
+{
     bool carry_out = registers->get_flag()->carry;
     bool lsb = (registers->get_a() & 0x01) != 0;
 
@@ -147,7 +156,8 @@ void Instruction::rra_inst() {
     registers->get_flag()->carry = lsb;
 }
 
-void Instruction::rla_inst() {
+void Instruction::rla_inst()
+{
     bool carry_out = registers->get_flag()->carry;
     bool msb = (registers->get_a() & 0x80) != 0;
 
@@ -160,7 +170,8 @@ void Instruction::rla_inst() {
     registers->get_flag()->carry = msb;
 }
 
-void Instruction::rrca_inst() {
+void Instruction::rrca_inst()
+{
     bool lsb = (registers->get_a() & 0x01) != 0;
 
     u8 a = (registers->get_a() >> 1) | (lsb ? 0x80 : 0x00);
@@ -172,7 +183,8 @@ void Instruction::rrca_inst() {
     registers->get_flag()->carry = lsb;
 }
 
-void Instruction::rlca_inst() {
+void Instruction::rlca_inst()
+{
     bool msb = (registers->get_a() & 0x80) != 0;
 
     u8 a = (registers->get_a() << 1) | (msb ? 0x01 : 0x00);
@@ -184,7 +196,8 @@ void Instruction::rlca_inst() {
     registers->get_flag()->carry = msb;
 }
 
-void Instruction::cpl_inst() {
+void Instruction::cpl_inst()
+{
     u8 a = ~registers->get_a();
     registers->set_a(a);
 
@@ -192,27 +205,31 @@ void Instruction::cpl_inst() {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::bit_inst(u8 bit, u8 value) {
-    cout << "Testing bit " << static_cast<int>(bit) << " of value: 0x" 
-         << hex << static_cast<int>(value) << dec << endl;
+void Instruction::bit_inst(u8 bit, u8 value)
+{
+    // cout << "Testing bit " << static_cast<int>(bit) << " of value: 0x" 
+    //      << hex << static_cast<int>(value) << dec << endl;
     bool is_set = (value & (1 << bit)) != 0;
 
     registers->get_flag()->zero = !is_set;
-    cout << "Is bit " << static_cast<int>(bit) << " set? " << boolalpha << is_set << endl;
+    // cout << "Is bit " << static_cast<int>(bit) << " set? " << boolalpha << is_set << endl;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = true;
-    cout << "Zero flag after BIT: " << boolalpha << registers->get_flag()->zero << endl;
+    // cout << "Zero flag after BIT: " << boolalpha << registers->get_flag()->zero << endl;
 }
 
-void Instruction::res_inst(u8 bit, u8 value) {
+void Instruction::res_inst(u8 bit, u8 value)
+{
     value &= ~(1 << bit);
 }
 
-void Instruction::set_inst(u8 bit, u8 value) {
+void Instruction::set_inst(u8 bit, u8 value)
+{
     value |= (1 << bit);
 }
 
-void Instruction::srl_inst(u8 value) {
+void Instruction::srl_inst(u8 value)
+{
     registers->get_flag()->carry = (value & 0x01);
     value >>= 1;
 
@@ -221,7 +238,8 @@ void Instruction::srl_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::rr_inst(u8 value) {
+void Instruction::rr_inst(u8 value)
+{
     bool old_carry = registers->get_flag()->carry;
     registers->get_flag()->carry = (value & 0x01);
 
@@ -232,7 +250,8 @@ void Instruction::rr_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::rl_inst(u8 value) {
+void Instruction::rl_inst(u8 value)
+{
     bool old_carry = registers->get_flag()->carry;
     registers->get_flag()->carry = ((value & 0x80) != 0);
 
@@ -243,7 +262,8 @@ void Instruction::rl_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::rrc_inst(u8 value) {
+void Instruction::rrc_inst(u8 value)
+{
     bool lsb = (value & 0x01);
     registers->get_flag()->carry = lsb;
 
@@ -254,7 +274,8 @@ void Instruction::rrc_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::rlc_inst(u8 value) {
+void Instruction::rlc_inst(u8 value)
+{
     bool msb = (value & 0x80);
     registers->get_flag()->carry = msb;
 
@@ -265,7 +286,8 @@ void Instruction::rlc_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::sra_inst(u8 value) {
+void Instruction::sra_inst(u8 value)
+{
     bool lsb = (value & 0x01);
     bool msb = (value & 0x80);
 
@@ -277,7 +299,8 @@ void Instruction::sra_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::sla_inst(u8 value) {
+void Instruction::sla_inst(u8 value)
+{
     bool msb = (value & 0x80);
 
     registers->get_flag()->carry = msb;
@@ -288,7 +311,8 @@ void Instruction::sla_inst(u8 value) {
     registers->get_flag()->half_carry = false;
 }
 
-void Instruction::swap_inst(u8 value) {
+void Instruction::swap_inst(u8 value)
+{
     value = (value >> 4) | (value << 4);
 
     registers->get_flag()->zero = (value == 0);
@@ -297,7 +321,8 @@ void Instruction::swap_inst(u8 value) {
     registers->get_flag()->carry = false;
 }
 
-u16 Instruction::addhl_inst(u16 value) {
+u16 Instruction::addhl_inst(u16 value)
+{
     u32 result = static_cast<u32>(registers->get_HL()) + value;
     u16 new_value = static_cast<u16>(result);
 
@@ -309,31 +334,42 @@ u16 Instruction::addhl_inst(u16 value) {
     return new_value;
 }
 
-bool Instruction::check_jump_condition(JumpCondition jump) {
+bool Instruction::check_jump_condition(JumpCondition jump)
+{
+    // cout << "Checking jump condition: " << static_cast<int>(jump) << endl;
+    // cout << "Flags - Zero: " << boolalpha << registers->get_flag()->zero
+    //      << ", Carry: " << registers->get_flag()->carry << endl;
     switch (jump)
     {
         case JumpCondition::NotZero:
+            // cout << "Condition: NotZero, Zero flag is " << boolalpha << registers->get_flag()->zero << endl;
             return !registers->get_flag()->zero;
 
         case JumpCondition::Zero:
+            // cout << "Condition: Zero, Zero flag is " << boolalpha << registers->get_flag()->zero << endl;
             return registers->get_flag()->zero;
 
         case JumpCondition::NotCarry:
+            // cout << "Condition: NotCarry, Carry flag is " << boolalpha << registers->get_flag()->carry << endl;
             return !registers->get_flag()->carry;
 
         case JumpCondition::Carry:
+            // cout << "Condition: Carry, Carry flag is " << boolalpha << registers->get_flag()->carry << endl;
             return registers->get_flag()->carry;
 
         case JumpCondition::Always:
+            // cout << "Condition: Always, jumping unconditionally" << endl;
             return true;
 
         default:
+            cout << "Unknown jump condition: " << static_cast<int>(jump) << endl;
             throw runtime_error("Unknown loadtype at check_jump_condition");
             break;
     }
 }
 
-void Instruction::jp_inst(bool should_jump) {
+void Instruction::jp_inst(bool should_jump)
+{
     if (should_jump)
     {
         u16 lsb = static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 1));
@@ -347,25 +383,35 @@ void Instruction::jp_inst(bool should_jump) {
     }
 }
 
-void Instruction::jr_inst(bool should_jump) {
+void Instruction::jr_inst(bool should_jump)
+{
+    // cout << "PC before jump: 0x" << hex << static_cast<int>(registers->get_PC()) << endl;
     if (should_jump)
     {
         i8 offset = static_cast<i8>(registers->get_bus()->read_byte(registers->get_PC() + 1));
-        registers->set_PC(registers->get_PC() + 1 + offset);        //Was +1 changed to +2
+        registers->set_PC(registers->get_PC() + 1 + offset);
+        // cout << "Offset: " << static_cast<int>(offset) << " Jumping: " << boolalpha << should_jump << endl;
     }
     else
     {
-        registers->set_PC(registers->get_PC() + 1);                 //Was +1 changed to +2
+        registers->set_PC(registers->get_PC() + 1);
     }
 }
 
-void Instruction::jpi_inst() {
+void Instruction::jpi_inst()
+{
     u16 address = (static_cast<u16>(registers->get_h()) << 8) | static_cast<u16>(registers->get_l());
     registers->set_PC(address);
     cycle_value += 1;
 }
 
-void Instruction::ld_inst(const Instruction& instruction) {
+void Instruction::rst_inst()
+{
+    
+}
+
+void Instruction::ld_inst(const Instruction& instruction)
+{
     switch (instruction.get_load_type())
     {
         case LoadType::Byte:
@@ -382,7 +428,8 @@ void Instruction::ld_inst(const Instruction& instruction) {
     }
 }
 
-void Instruction::byte_load(const Instruction& instruction) {
+void Instruction::byte_load(const Instruction& instruction)
+{
     u8 value = get_8_source(instruction.get_load_source());
 
     switch (instruction.get_load_target())
@@ -414,8 +461,30 @@ void Instruction::byte_load(const Instruction& instruction) {
             break;
         }
         case LoadTarget::HLILOW: {
+            cout << "[DEBUG] Writing to address HL_LOW: " << hex << registers->get_HL() 
+                 << " Value: " << static_cast<int>(value) << endl;
+
+            cout << "[DEBUG] HL before decrement: " << hex << registers->get_HL() 
+                 << " H: " << static_cast<int>(registers->get_h()) 
+                 << " L: " << static_cast<int>(registers->get_l()) << endl;
+
             registers->get_bus()->write_byte(registers->get_HL(), value);
             registers->set_HL(registers->get_HL() - 1);
+            // if  (registers->get_l() == 0x00)
+            // {
+            //     registers->set_l(0xFF);
+            //     registers->set_h(registers->get_h() - 1);
+            // }
+            // else
+            // {
+            //     registers->set_l(registers->get_l() - 1);
+            // }
+
+            cout << "[DEBUG] HL after decrement: " << hex << registers->get_HL() 
+                 << " H: " << static_cast<int>(registers->get_h()) 
+                 << " L: " << static_cast<int>(registers->get_l()) << endl;
+
+            cout << "[DEBUG] Incrementing HL_LOW to: " << hex << registers->get_HL() << endl;
             break;
         }
         case LoadTarget::A16: {
@@ -431,14 +500,19 @@ void Instruction::byte_load(const Instruction& instruction) {
     }
 }
 
-void Instruction::world_load(const Instruction& instruction) {
+void Instruction::world_load(const Instruction& instruction)
+{
     u16 value = get_16_source(instruction.get_load_source());
 
     switch (instruction.get_load_target())
     {
         case LoadTarget::BC: registers->set_BC(value); break;
         case LoadTarget::DE: registers->set_DE(value); break;
-        case LoadTarget::HL: registers->set_HL(value); break;
+        case LoadTarget::HL: 
+            cout << "[DEBUG] Writing to address HL: " << hex << registers->get_HL() 
+                 << " Value: " << static_cast<int>(value) << endl;
+            registers->set_HL(value);
+            break;
         case LoadTarget::SP: registers->set_SP(value); break;
         case LoadTarget::A16: {
             u8 lower_byte = registers->read_next_byte();
@@ -453,7 +527,8 @@ void Instruction::world_load(const Instruction& instruction) {
     }
 }
 
-u8 Instruction::get_8_source(LoadSource source) {
+u8 Instruction::get_8_source(LoadSource source)
+{
     switch (source)
     {
         case LoadSource::A: return registers->get_a();
@@ -496,7 +571,8 @@ u8 Instruction::get_8_source(LoadSource source) {
     }
 }
 
-u16 Instruction::get_16_source(LoadSource source) {
+u16 Instruction::get_16_source(LoadSource source)
+{
     switch (source)
     {
         case LoadSource::HL: return registers->get_HL();
@@ -504,10 +580,13 @@ u16 Instruction::get_16_source(LoadSource source) {
         case LoadSource::N16: {
             u8 lower_byte = registers->read_next_byte();
             u8 upper_byte = registers->read_next_byte();
+            cout << "N16 lower byte: " << hex << +lower_byte << endl;
+            cout << "N16 upper byte: " << hex << +upper_byte << endl;
             return static_cast<u16>(lower_byte | (upper_byte << 8));
         }
         case LoadSource::SPs8: {
             i8 s8 = static_cast<i8>(registers->read_next_byte());
+            cout << "Signed 8-bit offset: " << dec << +s8 << endl;
             return registers->get_SP() + s8;
         }
         default: throw runtime_error("Unknown source at get_16_source");
@@ -550,6 +629,12 @@ const unordered_map<u8, Instruction> Instruction::instruction_map_not_prefixed =
     {0xCD, Instruction(InstructionType::CALL, JumpCondition::Always)},
     {0xCC, Instruction(InstructionType::CALL, JumpCondition::Zero)},
     {0xDC, Instruction(InstructionType::CALL, JumpCondition::Carry)},
+
+    //PUSH
+    {0xDF, Instruction(InstructionType::RST, 4)},
+    {0xCF, Instruction(InstructionType::RST, 4)},
+    {0xEF, Instruction(InstructionType::RST, 4)},
+    {0xFF, Instruction(InstructionType::RST, 4)},
 
     //INC
     {0x03, Instruction(InstructionType::INC, ArithmeticTarget::BC, 2)},
@@ -1064,7 +1149,8 @@ const unordered_map<u8, Instruction> Instruction::instruction_map_prefixed = {
     {0xFF, Instruction(InstructionType::SET, ArithmeticTarget::A, 7, 2)},
 };
 
-optional<Instruction> Instruction::from_byte(u8 byte, bool prefixed) {
+optional<Instruction> Instruction::from_byte(u8 byte, bool prefixed)
+{
     if (prefixed)
     {
         return from_byte_prefixed(byte);
@@ -1075,7 +1161,8 @@ optional<Instruction> Instruction::from_byte(u8 byte, bool prefixed) {
     }
 }
 
-optional<Instruction> Instruction::from_byte_not_prefixed(u8 byte) {
+optional<Instruction> Instruction::from_byte_not_prefixed(u8 byte)
+{
     auto it = instruction_map_not_prefixed.find(byte);
     if (it != instruction_map_not_prefixed.end())
     {
@@ -1084,7 +1171,8 @@ optional<Instruction> Instruction::from_byte_not_prefixed(u8 byte) {
     return nullopt;
 }
 
-optional<Instruction> Instruction::from_byte_prefixed(u8 byte) {
+optional<Instruction> Instruction::from_byte_prefixed(u8 byte)
+{
     auto it = instruction_map_prefixed.find(byte);
     if (it != instruction_map_prefixed.end())
     {
@@ -1124,540 +1212,5 @@ optional<Instruction> Instruction::from_byte_prefixed(u8 byte) {
 //     else
 //     {
 //         return nullopt;
-//     }
-// }
-
-// optional<Instruction> Instruction::from_byte(u8 byte, bool prefixed) {
-//     if (prefixed)
-//     {
-//         return from_byte_prefixed(byte);
-//     }
-//     else
-//     {
-//         return from_byte_not_prefixed(byte);
-//     }
-// }
-
-// optional<Instruction> Instruction::from_byte_prefixed(u8 byte) {
-//     switch (byte)
-//     {
-//         //RLC
-//         case 0x00: return Instruction(InstructionType::RLC, ArithmeticTarget::B);
-//         case 0x01: return Instruction(InstructionType::RLC, ArithmeticTarget::C);
-//         case 0x02: return Instruction(InstructionType::RLC, ArithmeticTarget::D);
-//         case 0x03: return Instruction(InstructionType::RLC, ArithmeticTarget::E);
-//         case 0x04: return Instruction(InstructionType::RLC, ArithmeticTarget::H);
-//         case 0x05: return Instruction(InstructionType::RLC, ArithmeticTarget::L);
-//         case 0x06: return Instruction(InstructionType::RLC, ArithmeticTarget::HLI);
-//         case 0x07: return Instruction(InstructionType::RLC, ArithmeticTarget::A);
-
-//         //RRC
-//         case 0x08: return Instruction(InstructionType::RLC, ArithmeticTarget::B);
-//         case 0x09: return Instruction(InstructionType::RLC, ArithmeticTarget::C);
-//         case 0x0A: return Instruction(InstructionType::RLC, ArithmeticTarget::D);
-//         case 0x0B: return Instruction(InstructionType::RLC, ArithmeticTarget::E);
-//         case 0x0C: return Instruction(InstructionType::RLC, ArithmeticTarget::H);
-//         case 0x0D: return Instruction(InstructionType::RLC, ArithmeticTarget::L);
-//         case 0x0E: return Instruction(InstructionType::RLC, ArithmeticTarget::HLI);
-//         case 0x0F: return Instruction(InstructionType::RLC, ArithmeticTarget::A);
-
-//         //RL
-//         case 0x10: return Instruction(InstructionType::RL, ArithmeticTarget::B);
-//         case 0x11: return Instruction(InstructionType::RL, ArithmeticTarget::C);
-//         case 0x12: return Instruction(InstructionType::RL, ArithmeticTarget::D);
-//         case 0x13: return Instruction(InstructionType::RL, ArithmeticTarget::E);
-//         case 0x14: return Instruction(InstructionType::RL, ArithmeticTarget::H);
-//         case 0x15: return Instruction(InstructionType::RL, ArithmeticTarget::L);
-//         case 0x16: return Instruction(InstructionType::RL, ArithmeticTarget::HLI);
-//         case 0x17: return Instruction(InstructionType::RL, ArithmeticTarget::A);
-        
-//         //RR
-//         case 0x18: return Instruction(InstructionType::RR, ArithmeticTarget::B);
-//         case 0x19: return Instruction(InstructionType::RR, ArithmeticTarget::C);
-//         case 0x1A: return Instruction(InstructionType::RR, ArithmeticTarget::D);
-//         case 0x1B: return Instruction(InstructionType::RR, ArithmeticTarget::E);
-//         case 0x1C: return Instruction(InstructionType::RR, ArithmeticTarget::H);
-//         case 0x1D: return Instruction(InstructionType::RR, ArithmeticTarget::L);
-//         case 0x1E: return Instruction(InstructionType::RR, ArithmeticTarget::HLI);
-//         case 0x1F: return Instruction(InstructionType::RR, ArithmeticTarget::A);
-
-//         //SLA
-//         case 0x20: return Instruction(InstructionType::SLA, ArithmeticTarget::B);
-//         case 0x21: return Instruction(InstructionType::SLA, ArithmeticTarget::C);
-//         case 0x22: return Instruction(InstructionType::SLA, ArithmeticTarget::D);
-//         case 0x23: return Instruction(InstructionType::SLA, ArithmeticTarget::E);
-//         case 0x24: return Instruction(InstructionType::SLA, ArithmeticTarget::H);
-//         case 0x25: return Instruction(InstructionType::SLA, ArithmeticTarget::L);
-//         case 0x26: return Instruction(InstructionType::SLA, ArithmeticTarget::HLI);
-//         case 0x27: return Instruction(InstructionType::SLA, ArithmeticTarget::A);
-
-//         //SRA
-//         case 0x28: return Instruction(InstructionType::SRA, ArithmeticTarget::B);
-//         case 0x29: return Instruction(InstructionType::SRA, ArithmeticTarget::C);
-//         case 0x2A: return Instruction(InstructionType::SRA, ArithmeticTarget::D);
-//         case 0x2B: return Instruction(InstructionType::SRA, ArithmeticTarget::E);
-//         case 0x2C: return Instruction(InstructionType::SRA, ArithmeticTarget::H);
-//         case 0x2D: return Instruction(InstructionType::SRA, ArithmeticTarget::L);
-//         case 0x2E: return Instruction(InstructionType::SRA, ArithmeticTarget::HLI);
-//         case 0x2F: return Instruction(InstructionType::SRA, ArithmeticTarget::A);
-
-//         //SWAP
-//         case 0x30: return Instruction(InstructionType::SWAP, ArithmeticTarget::B);
-//         case 0x31: return Instruction(InstructionType::SWAP, ArithmeticTarget::C);
-//         case 0x32: return Instruction(InstructionType::SWAP, ArithmeticTarget::D);
-//         case 0x33: return Instruction(InstructionType::SWAP, ArithmeticTarget::E);
-//         case 0x34: return Instruction(InstructionType::SWAP, ArithmeticTarget::H);
-//         case 0x35: return Instruction(InstructionType::SWAP, ArithmeticTarget::L);
-//         case 0x36: return Instruction(InstructionType::SWAP, ArithmeticTarget::HLI);
-//         case 0x37: return Instruction(InstructionType::SWAP, ArithmeticTarget::A);
-
-//         //SRL
-//         case 0x38: return Instruction(InstructionType::SRL, ArithmeticTarget::B);
-//         case 0x39: return Instruction(InstructionType::SRL, ArithmeticTarget::C);
-//         case 0x3A: return Instruction(InstructionType::SRL, ArithmeticTarget::D);
-//         case 0x3B: return Instruction(InstructionType::SRL, ArithmeticTarget::E);
-//         case 0x3C: return Instruction(InstructionType::SRL, ArithmeticTarget::H);
-//         case 0x3D: return Instruction(InstructionType::SRL, ArithmeticTarget::L);
-//         case 0x3E: return Instruction(InstructionType::SRL, ArithmeticTarget::HLI);
-//         case 0x3F: return Instruction(InstructionType::SRL, ArithmeticTarget::A);
-
-//         //BIT
-//         case 0x40: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 0);
-//         case 0x41: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 0);
-//         case 0x42: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 0);
-//         case 0x43: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 0);
-//         case 0x44: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 0);
-//         case 0x45: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 0);
-//         case 0x46: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 0);
-//         case 0x47: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 0);
-//         case 0x48: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 1);
-//         case 0x49: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 1);
-//         case 0x4A: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 1);
-//         case 0x4B: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 1);
-//         case 0x4C: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 1);
-//         case 0x4D: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 1);
-//         case 0x4E: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 1);
-//         case 0x4F: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 1);
-//         case 0x50: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 2);
-//         case 0x51: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 2);
-//         case 0x52: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 2);
-//         case 0x53: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 2);
-//         case 0x54: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 2);
-//         case 0x55: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 2);
-//         case 0x56: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 2);
-//         case 0x57: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 2);
-//         case 0x58: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 3);
-//         case 0x59: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 3);
-//         case 0x5A: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 3);
-//         case 0x5B: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 3);
-//         case 0x5C: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 3);
-//         case 0x5D: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 3);
-//         case 0x5E: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 3);
-//         case 0x5F: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 3);
-//         case 0x60: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 4);
-//         case 0x61: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 4);
-//         case 0x62: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 4);
-//         case 0x63: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 4);
-//         case 0x64: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 4);
-//         case 0x65: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 4);
-//         case 0x66: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 4);
-//         case 0x67: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 4);
-//         case 0x68: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 5);
-//         case 0x69: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 5);
-//         case 0x6A: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 5);
-//         case 0x6B: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 5);
-//         case 0x6C: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 5);
-//         case 0x6D: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 5);
-//         case 0x6E: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 5);
-//         case 0x6F: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 5);
-//         case 0x70: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 6);
-//         case 0x71: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 6);
-//         case 0x72: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 6);
-//         case 0x73: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 6);
-//         case 0x74: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 6);
-//         case 0x75: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 6);
-//         case 0x76: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 6);
-//         case 0x77: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 6);
-//         case 0x78: return Instruction(InstructionType::BIT, ArithmeticTarget::B, 7);
-//         case 0x79: return Instruction(InstructionType::BIT, ArithmeticTarget::C, 7);
-//         case 0x7A: return Instruction(InstructionType::BIT, ArithmeticTarget::D, 7);
-//         case 0x7B: return Instruction(InstructionType::BIT, ArithmeticTarget::E, 7);
-//         case 0x7C: return Instruction(InstructionType::BIT, ArithmeticTarget::H, 7);
-//         case 0x7D: return Instruction(InstructionType::BIT, ArithmeticTarget::L, 7);
-//         case 0x7E: return Instruction(InstructionType::BIT, ArithmeticTarget::HLI, 7);
-//         case 0x7F: return Instruction(InstructionType::BIT, ArithmeticTarget::A, 7);
-
-//         //RES
-//         case 0x80: return Instruction(InstructionType::RES, ArithmeticTarget::B, 0);
-//         case 0x81: return Instruction(InstructionType::RES, ArithmeticTarget::C, 0);
-//         case 0x82: return Instruction(InstructionType::RES, ArithmeticTarget::D, 0);
-//         case 0x83: return Instruction(InstructionType::RES, ArithmeticTarget::E, 0);
-//         case 0x84: return Instruction(InstructionType::RES, ArithmeticTarget::H, 0);
-//         case 0x85: return Instruction(InstructionType::RES, ArithmeticTarget::L, 0);
-//         case 0x86: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 0);
-//         case 0x87: return Instruction(InstructionType::RES, ArithmeticTarget::A, 0);
-//         case 0x88: return Instruction(InstructionType::RES, ArithmeticTarget::B, 1);
-//         case 0x89: return Instruction(InstructionType::RES, ArithmeticTarget::C, 1);
-//         case 0x8A: return Instruction(InstructionType::RES, ArithmeticTarget::D, 1);
-//         case 0x8B: return Instruction(InstructionType::RES, ArithmeticTarget::E, 1);
-//         case 0x8C: return Instruction(InstructionType::RES, ArithmeticTarget::H, 1);
-//         case 0x8D: return Instruction(InstructionType::RES, ArithmeticTarget::L, 1);
-//         case 0x8E: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 1);
-//         case 0x8F: return Instruction(InstructionType::RES, ArithmeticTarget::A, 1);
-//         case 0x90: return Instruction(InstructionType::RES, ArithmeticTarget::B, 2);
-//         case 0x91: return Instruction(InstructionType::RES, ArithmeticTarget::C, 2);
-//         case 0x92: return Instruction(InstructionType::RES, ArithmeticTarget::D, 2);
-//         case 0x93: return Instruction(InstructionType::RES, ArithmeticTarget::E, 2);
-//         case 0x94: return Instruction(InstructionType::RES, ArithmeticTarget::H, 2);
-//         case 0x95: return Instruction(InstructionType::RES, ArithmeticTarget::L, 2);
-//         case 0x96: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 2);
-//         case 0x97: return Instruction(InstructionType::RES, ArithmeticTarget::A, 2);
-//         case 0x98: return Instruction(InstructionType::RES, ArithmeticTarget::B, 3);
-//         case 0x99: return Instruction(InstructionType::RES, ArithmeticTarget::C, 3);
-//         case 0x9A: return Instruction(InstructionType::RES, ArithmeticTarget::D, 3);
-//         case 0x9B: return Instruction(InstructionType::RES, ArithmeticTarget::E, 3);
-//         case 0x9C: return Instruction(InstructionType::RES, ArithmeticTarget::H, 3);
-//         case 0x9D: return Instruction(InstructionType::RES, ArithmeticTarget::L, 3);
-//         case 0x9E: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 3);
-//         case 0x9F: return Instruction(InstructionType::RES, ArithmeticTarget::A, 3);
-//         case 0xA0: return Instruction(InstructionType::RES, ArithmeticTarget::B, 4);
-//         case 0xA1: return Instruction(InstructionType::RES, ArithmeticTarget::C, 4);
-//         case 0xA2: return Instruction(InstructionType::RES, ArithmeticTarget::D, 4);
-//         case 0xA3: return Instruction(InstructionType::RES, ArithmeticTarget::E, 4);
-//         case 0xA4: return Instruction(InstructionType::RES, ArithmeticTarget::H, 4);
-//         case 0xA5: return Instruction(InstructionType::RES, ArithmeticTarget::L, 4);
-//         case 0xA6: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 4);
-//         case 0xA7: return Instruction(InstructionType::RES, ArithmeticTarget::A, 4);
-//         case 0xA8: return Instruction(InstructionType::RES, ArithmeticTarget::B, 5);
-//         case 0xA9: return Instruction(InstructionType::RES, ArithmeticTarget::C, 5);
-//         case 0xAA: return Instruction(InstructionType::RES, ArithmeticTarget::D, 5);
-//         case 0xAB: return Instruction(InstructionType::RES, ArithmeticTarget::E, 5);
-//         case 0xAC: return Instruction(InstructionType::RES, ArithmeticTarget::H, 5);
-//         case 0xAD: return Instruction(InstructionType::RES, ArithmeticTarget::L, 5);
-//         case 0xAE: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 5);
-//         case 0xAF: return Instruction(InstructionType::RES, ArithmeticTarget::A, 5);
-//         case 0xB0: return Instruction(InstructionType::RES, ArithmeticTarget::B, 6);
-//         case 0xB1: return Instruction(InstructionType::RES, ArithmeticTarget::C, 6);
-//         case 0xB2: return Instruction(InstructionType::RES, ArithmeticTarget::D, 6);
-//         case 0xB3: return Instruction(InstructionType::RES, ArithmeticTarget::E, 6);
-//         case 0xB4: return Instruction(InstructionType::RES, ArithmeticTarget::H, 6);
-//         case 0xB5: return Instruction(InstructionType::RES, ArithmeticTarget::L, 6);
-//         case 0xB6: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 6);
-//         case 0xB7: return Instruction(InstructionType::RES, ArithmeticTarget::A, 6);
-//         case 0xB8: return Instruction(InstructionType::RES, ArithmeticTarget::B, 7);
-//         case 0xB9: return Instruction(InstructionType::RES, ArithmeticTarget::C, 7);
-//         case 0xBA: return Instruction(InstructionType::RES, ArithmeticTarget::D, 7);
-//         case 0xBB: return Instruction(InstructionType::RES, ArithmeticTarget::E, 7);
-//         case 0xBC: return Instruction(InstructionType::RES, ArithmeticTarget::H, 7);
-//         case 0xBD: return Instruction(InstructionType::RES, ArithmeticTarget::L, 7);
-//         case 0xBE: return Instruction(InstructionType::RES, ArithmeticTarget::HLI, 7);
-//         case 0xBF: return Instruction(InstructionType::RES, ArithmeticTarget::A, 7);
-
-//         //SET
-//         case 0xC0: return Instruction(InstructionType::SET, ArithmeticTarget::B, 0);
-//         case 0xC1: return Instruction(InstructionType::SET, ArithmeticTarget::C, 0);
-//         case 0xC2: return Instruction(InstructionType::SET, ArithmeticTarget::D, 0);
-//         case 0xC3: return Instruction(InstructionType::SET, ArithmeticTarget::E, 0);
-//         case 0xC4: return Instruction(InstructionType::SET, ArithmeticTarget::H, 0);
-//         case 0xC5: return Instruction(InstructionType::SET, ArithmeticTarget::L, 0);
-//         case 0xC6: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 0);
-//         case 0xC7: return Instruction(InstructionType::SET, ArithmeticTarget::A, 0);
-//         case 0xC8: return Instruction(InstructionType::SET, ArithmeticTarget::B, 1);
-//         case 0xC9: return Instruction(InstructionType::SET, ArithmeticTarget::C, 1);
-//         case 0xCA: return Instruction(InstructionType::SET, ArithmeticTarget::D, 1);
-//         case 0xCB: return Instruction(InstructionType::SET, ArithmeticTarget::E, 1);
-//         case 0xCC: return Instruction(InstructionType::SET, ArithmeticTarget::H, 1);
-//         case 0xCD: return Instruction(InstructionType::SET, ArithmeticTarget::L, 1);
-//         case 0xCE: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 1);
-//         case 0xCF: return Instruction(InstructionType::SET, ArithmeticTarget::A, 1);
-//         case 0xD0: return Instruction(InstructionType::SET, ArithmeticTarget::B, 2);
-//         case 0xD1: return Instruction(InstructionType::SET, ArithmeticTarget::C, 2);
-//         case 0xD2: return Instruction(InstructionType::SET, ArithmeticTarget::D, 2);
-//         case 0xD3: return Instruction(InstructionType::SET, ArithmeticTarget::E, 2);
-//         case 0xD4: return Instruction(InstructionType::SET, ArithmeticTarget::H, 2);
-//         case 0xD5: return Instruction(InstructionType::SET, ArithmeticTarget::L, 2);
-//         case 0xD6: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 2);
-//         case 0xD7: return Instruction(InstructionType::SET, ArithmeticTarget::A, 2);
-//         case 0xD8: return Instruction(InstructionType::SET, ArithmeticTarget::B, 3);
-//         case 0xD9: return Instruction(InstructionType::SET, ArithmeticTarget::C, 3);
-//         case 0xDA: return Instruction(InstructionType::SET, ArithmeticTarget::D, 3);
-//         case 0xDB: return Instruction(InstructionType::SET, ArithmeticTarget::E, 3);
-//         case 0xDC: return Instruction(InstructionType::SET, ArithmeticTarget::H, 3);
-//         case 0xDD: return Instruction(InstructionType::SET, ArithmeticTarget::L, 3);
-//         case 0xDE: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 3);
-//         case 0xDF: return Instruction(InstructionType::SET, ArithmeticTarget::A, 3);
-//         case 0xE0: return Instruction(InstructionType::SET, ArithmeticTarget::B, 4);
-//         case 0xE1: return Instruction(InstructionType::SET, ArithmeticTarget::C, 4);
-//         case 0xE2: return Instruction(InstructionType::SET, ArithmeticTarget::D, 4);
-//         case 0xE3: return Instruction(InstructionType::SET, ArithmeticTarget::E, 4);
-//         case 0xE4: return Instruction(InstructionType::SET, ArithmeticTarget::H, 4);
-//         case 0xE5: return Instruction(InstructionType::SET, ArithmeticTarget::L, 4);
-//         case 0xE6: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 4);
-//         case 0xE7: return Instruction(InstructionType::SET, ArithmeticTarget::A, 4);
-//         case 0xE8: return Instruction(InstructionType::SET, ArithmeticTarget::B, 5);
-//         case 0xE9: return Instruction(InstructionType::SET, ArithmeticTarget::C, 5);
-//         case 0xEA: return Instruction(InstructionType::SET, ArithmeticTarget::D, 5);
-//         case 0xEB: return Instruction(InstructionType::SET, ArithmeticTarget::E, 5);
-//         case 0xEC: return Instruction(InstructionType::SET, ArithmeticTarget::H, 5);
-//         case 0xED: return Instruction(InstructionType::SET, ArithmeticTarget::L, 5);
-//         case 0xEE: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 5);
-//         case 0xEF: return Instruction(InstructionType::SET, ArithmeticTarget::A, 5);
-//         case 0xF0: return Instruction(InstructionType::SET, ArithmeticTarget::B, 6);
-//         case 0xF1: return Instruction(InstructionType::SET, ArithmeticTarget::C, 6);
-//         case 0xF2: return Instruction(InstructionType::SET, ArithmeticTarget::D, 6);
-//         case 0xF3: return Instruction(InstructionType::SET, ArithmeticTarget::E, 6);
-//         case 0xF4: return Instruction(InstructionType::SET, ArithmeticTarget::H, 6);
-//         case 0xF5: return Instruction(InstructionType::SET, ArithmeticTarget::L, 6);
-//         case 0xF6: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 6);
-//         case 0xF7: return Instruction(InstructionType::SET, ArithmeticTarget::A, 6);
-//         case 0xF8: return Instruction(InstructionType::SET, ArithmeticTarget::B, 7);
-//         case 0xF9: return Instruction(InstructionType::SET, ArithmeticTarget::C, 7);
-//         case 0xFA: return Instruction(InstructionType::SET, ArithmeticTarget::D, 7);
-//         case 0xFB: return Instruction(InstructionType::SET, ArithmeticTarget::E, 7);
-//         case 0xFC: return Instruction(InstructionType::SET, ArithmeticTarget::H, 7);
-//         case 0xFD: return Instruction(InstructionType::SET, ArithmeticTarget::L, 7);
-//         case 0xFE: return Instruction(InstructionType::SET, ArithmeticTarget::HLI, 7);
-//         case 0xFF: return Instruction(InstructionType::SET, ArithmeticTarget::A, 7);
-
-//         default: return nullopt;
-//     }
-// }
-
-// optional<Instruction> Instruction::from_byte_not_prefixed(u8 byte) {
-//     switch (byte)
-//     {
-//         //INC
-//         case 0x03: return Instruction(InstructionType::INC, ArithmeticTarget::BC);
-//         case 0x13: return Instruction(InstructionType::INC, ArithmeticTarget::DE);
-//         case 0x23: return Instruction(InstructionType::INC, ArithmeticTarget::HL);
-//         case 0x33: return Instruction(InstructionType::INC, ArithmeticTarget::SP);
-//         case 0x04: return Instruction(InstructionType::INC, ArithmeticTarget::B);
-//         case 0x14: return Instruction(InstructionType::INC, ArithmeticTarget::D);
-//         case 0x24: return Instruction(InstructionType::INC, ArithmeticTarget::H);
-//         case 0x34: return Instruction(InstructionType::INC, ArithmeticTarget::HLI);
-//         case 0x0C: return Instruction(InstructionType::INC, ArithmeticTarget::C);
-//         case 0x1C: return Instruction(InstructionType::INC, ArithmeticTarget::E);
-//         case 0x2C: return Instruction(InstructionType::INC, ArithmeticTarget::L);
-//         case 0x3C: return Instruction(InstructionType::INC, ArithmeticTarget::A);
-
-//         //DEC
-//         case 0x05: return Instruction(InstructionType::DEC, ArithmeticTarget::B);
-//         case 0x15: return Instruction(InstructionType::DEC, ArithmeticTarget::D);
-//         case 0x25: return Instruction(InstructionType::DEC, ArithmeticTarget::H);
-//         case 0x35: return Instruction(InstructionType::DEC, ArithmeticTarget::HLI);
-//         case 0x0B: return Instruction(InstructionType::DEC, ArithmeticTarget::BC);
-//         case 0x1B: return Instruction(InstructionType::DEC, ArithmeticTarget::DE);
-//         case 0x2B: return Instruction(InstructionType::DEC, ArithmeticTarget::HL);
-//         case 0x3B: return Instruction(InstructionType::DEC, ArithmeticTarget::SP);
-//         case 0x0D: return Instruction(InstructionType::DEC, ArithmeticTarget::C);
-//         case 0x1D: return Instruction(InstructionType::DEC, ArithmeticTarget::E);
-//         case 0x2D: return Instruction(InstructionType::DEC, ArithmeticTarget::L);
-//         case 0x3D: return Instruction(InstructionType::DEC, ArithmeticTarget::A);
-
-//         //RLCA
-//         case 0x07: return Instruction(InstructionType::RLCA);
-
-//         //RRCA
-//         case 0x0F: return Instruction(InstructionType::RRCA);
-
-//         //RLA
-//         case 0x17: return Instruction(InstructionType::RLA);
-
-//         //RRA
-//         case 0x1F: return Instruction(InstructionType::RRA);
-
-//         //CPL
-//         case 0x2F: return Instruction(InstructionType::CPL);
-
-//         //SCF
-//         case 0x37: return Instruction(InstructionType::SCF);
-
-//         //CCF
-//         case 0x3F: return Instruction(InstructionType::CCF);
-
-//         //ADDHL
-//         case 0x09: return Instruction(InstructionType::ADDHL, ArithmeticTarget::BC);
-//         case 0x19: return Instruction(InstructionType::ADDHL, ArithmeticTarget::DE);
-//         case 0x29: return Instruction(InstructionType::ADDHL, ArithmeticTarget::HL);
-//         case 0x39: return Instruction(InstructionType::ADDHL, ArithmeticTarget::SP);
-
-//         //LD
-//         case 0x01: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::BC, LoadSource::N16);
-//         case 0x11: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::DE, LoadSource::N16);
-//         case 0x21: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::HL, LoadSource::N16);
-//         case 0x31: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::SP, LoadSource::N16);
-//         case 0x08: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::A16, LoadSource::SP);
-//         case 0xF8: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::HL, LoadSource::SPs8);
-//         case 0xF9: return Instruction(InstructionType::LD, LoadType::World, LoadTarget::SP, LoadSource::HL);
-
-//         case 0x02: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::BCI, LoadSource::A);
-//         case 0x12: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::DEI, LoadSource::A);
-//         case 0x22: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLIUP, LoadSource::A);
-//         case 0x32: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLILOW, LoadSource::A);
-//         case 0x06: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::N8);
-//         case 0x16: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::N8);
-//         case 0x26: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::N8);
-//         case 0x36: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::N8);
-//         case 0x0A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::BCI);
-//         case 0x1A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::DEI);
-//         case 0x2A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::HLIUP);
-//         case 0x3A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::HLILOW);
-//         case 0x0E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::N8);
-//         case 0x1E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::N8);
-//         case 0x2E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::N8);
-//         case 0x3E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::N8);
-
-//         case 0x40: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::B);
-//         case 0x41: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::C);
-//         case 0x42: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::D);
-//         case 0x43: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::E);
-//         case 0x44: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::H);
-//         case 0x45: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::L);
-//         case 0x46: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::HLI);
-//         case 0x47: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::B, LoadSource::A);
-//         case 0x48: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::B);
-//         case 0x49: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::C);
-//         case 0x4A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::D);
-//         case 0x4B: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::E);
-//         case 0x4C: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::H);
-//         case 0x4D: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::L);
-//         case 0x4E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::HLI);
-//         case 0x4F: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::C, LoadSource::A);
-//         case 0x50: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::B);
-//         case 0x51: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::C);
-//         case 0x52: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::D);
-//         case 0x53: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::E);
-//         case 0x54: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::H);
-//         case 0x55: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::L);
-//         case 0x56: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::HLI);
-//         case 0x57: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::D, LoadSource::A);
-//         case 0x58: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::B);
-//         case 0x59: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::C);
-//         case 0x5A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::D);
-//         case 0x5B: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::E);
-//         case 0x5C: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::H);
-//         case 0x5D: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::L);
-//         case 0x5E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::HLI);
-//         case 0x5F: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::E, LoadSource::A);
-//         case 0x60: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::B);
-//         case 0x61: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::C);
-//         case 0x62: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::D);
-//         case 0x63: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::E);
-//         case 0x64: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::H);
-//         case 0x65: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::L);
-//         case 0x66: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::HLI);
-//         case 0x67: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::H, LoadSource::A);
-//         case 0x68: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::B);
-//         case 0x69: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::C);
-//         case 0x6A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::D);
-//         case 0x6B: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::E);
-//         case 0x6C: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::H);
-//         case 0x6D: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::L);
-//         case 0x6E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::HLI);
-//         case 0x6F: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::L, LoadSource::A);
-//         case 0x70: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::B);
-//         case 0x71: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::C);
-//         case 0x72: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::D);
-//         case 0x73: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::E);
-//         case 0x74: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::H);
-//         case 0x75: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::L);
-//         case 0x77: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::HLI, LoadSource::A);
-//         case 0x78: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::B);
-//         case 0x79: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::C);
-//         case 0x7A: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::D);
-//         case 0x7B: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::E);
-//         case 0x7C: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::H);
-//         case 0x7D: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::L);
-//         case 0x7E: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::HLI);
-//         case 0x7F: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::A);
-
-//         case 0xE0: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A8, LoadSource::A);
-//         case 0xF0: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::A8);
-//         case 0xE2: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::CI, LoadSource::A);
-//         case 0xF2: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::CI);
-//         case 0xEA: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A16, LoadSource::A);
-//         case 0xFA: return Instruction(InstructionType::LD, LoadType::Byte, LoadTarget::A, LoadSource::A16);
-
-//         //ADD
-//         case 0x80: return Instruction(InstructionType::ADD, ArithmeticTarget::B);
-//         case 0x81: return Instruction(InstructionType::ADD, ArithmeticTarget::C);
-//         case 0x82: return Instruction(InstructionType::ADD, ArithmeticTarget::D);
-//         case 0x83: return Instruction(InstructionType::ADD, ArithmeticTarget::E);
-//         case 0x84: return Instruction(InstructionType::ADD, ArithmeticTarget::H);
-//         case 0x85: return Instruction(InstructionType::ADD, ArithmeticTarget::L);
-//         case 0x86: return Instruction(InstructionType::ADD, ArithmeticTarget::HLI);
-//         case 0x87: return Instruction(InstructionType::ADD, ArithmeticTarget::A);
-
-//         //ADC
-//         case 0x88: return Instruction(InstructionType::ADC, ArithmeticTarget::B);
-//         case 0x89: return Instruction(InstructionType::ADC, ArithmeticTarget::C);
-//         case 0x8A: return Instruction(InstructionType::ADC, ArithmeticTarget::D);
-//         case 0x8B: return Instruction(InstructionType::ADC, ArithmeticTarget::E);
-//         case 0x8C: return Instruction(InstructionType::ADC, ArithmeticTarget::H);
-//         case 0x8D: return Instruction(InstructionType::ADC, ArithmeticTarget::L);
-//         case 0x8E: return Instruction(InstructionType::ADC, ArithmeticTarget::HLI);
-//         case 0x8F: return Instruction(InstructionType::ADC, ArithmeticTarget::A);
-
-//         //SUB
-//         case 0x90: return Instruction(InstructionType::SUB, ArithmeticTarget::B);
-//         case 0x91: return Instruction(InstructionType::SUB, ArithmeticTarget::C);
-//         case 0x92: return Instruction(InstructionType::SUB, ArithmeticTarget::D);
-//         case 0x93: return Instruction(InstructionType::SUB, ArithmeticTarget::E);
-//         case 0x94: return Instruction(InstructionType::SUB, ArithmeticTarget::H);
-//         case 0x95: return Instruction(InstructionType::SUB, ArithmeticTarget::L);
-//         case 0x96: return Instruction(InstructionType::SUB, ArithmeticTarget::HLI);
-//         case 0x97: return Instruction(InstructionType::SUB, ArithmeticTarget::A);
-
-//         //SBC
-//         case 0x98: return Instruction(InstructionType::SBC, ArithmeticTarget::B);
-//         case 0x99: return Instruction(InstructionType::SBC, ArithmeticTarget::C);
-//         case 0x9A: return Instruction(InstructionType::SBC, ArithmeticTarget::D);
-//         case 0x9B: return Instruction(InstructionType::SBC, ArithmeticTarget::E);
-//         case 0x9C: return Instruction(InstructionType::SBC, ArithmeticTarget::H);
-//         case 0x9D: return Instruction(InstructionType::SBC, ArithmeticTarget::L);
-//         case 0x9E: return Instruction(InstructionType::SBC, ArithmeticTarget::HLI);
-//         case 0x9F: return Instruction(InstructionType::SBC, ArithmeticTarget::A);
-
-//         //AND
-//         case 0xA0: return Instruction(InstructionType::AND, ArithmeticTarget::B);
-//         case 0xA1: return Instruction(InstructionType::AND, ArithmeticTarget::C);
-//         case 0xA2: return Instruction(InstructionType::AND, ArithmeticTarget::D);
-//         case 0xA3: return Instruction(InstructionType::AND, ArithmeticTarget::E);
-//         case 0xA4: return Instruction(InstructionType::AND, ArithmeticTarget::H);
-//         case 0xA5: return Instruction(InstructionType::AND, ArithmeticTarget::L);
-//         case 0xA6: return Instruction(InstructionType::AND, ArithmeticTarget::HLI);
-//         case 0xA7: return Instruction(InstructionType::AND, ArithmeticTarget::A);
-
-//         //XOR
-//         case 0xA8: return Instruction(InstructionType::XOR, ArithmeticTarget::B);
-//         case 0xA9: return Instruction(InstructionType::XOR, ArithmeticTarget::C);
-//         case 0xAA: return Instruction(InstructionType::XOR, ArithmeticTarget::D);
-//         case 0xAB: return Instruction(InstructionType::XOR, ArithmeticTarget::E);
-//         case 0xAC: return Instruction(InstructionType::XOR, ArithmeticTarget::H);
-//         case 0xAD: return Instruction(InstructionType::XOR, ArithmeticTarget::L);
-//         case 0xAE: return Instruction(InstructionType::XOR, ArithmeticTarget::HLI);
-//         case 0xAF: return Instruction(InstructionType::XOR, ArithmeticTarget::A);
-
-//         //OR
-//         case 0xB0: return Instruction(InstructionType::OR, ArithmeticTarget::B);
-//         case 0xB1: return Instruction(InstructionType::OR, ArithmeticTarget::C);
-//         case 0xB2: return Instruction(InstructionType::OR, ArithmeticTarget::D);
-//         case 0xB3: return Instruction(InstructionType::OR, ArithmeticTarget::E);
-//         case 0xB4: return Instruction(InstructionType::OR, ArithmeticTarget::H);
-//         case 0xB5: return Instruction(InstructionType::OR, ArithmeticTarget::L);
-//         case 0xB6: return Instruction(InstructionType::OR, ArithmeticTarget::HLI);
-//         case 0xB7: return Instruction(InstructionType::OR, ArithmeticTarget::A);
-
-//         //CP
-//         case 0xB8: return Instruction(InstructionType::CP, ArithmeticTarget::B);
-//         case 0xB9: return Instruction(InstructionType::CP, ArithmeticTarget::C);
-//         case 0xBA: return Instruction(InstructionType::CP, ArithmeticTarget::D);
-//         case 0xBB: return Instruction(InstructionType::CP, ArithmeticTarget::E);
-//         case 0xBC: return Instruction(InstructionType::CP, ArithmeticTarget::H);
-//         case 0xBD: return Instruction(InstructionType::CP, ArithmeticTarget::L);
-//         case 0xBE: return Instruction(InstructionType::CP, ArithmeticTarget::HLI);
-//         case 0xBF: return Instruction(InstructionType::CP, ArithmeticTarget::A);
-
-//         default: return nullopt;
 //     }
 // }

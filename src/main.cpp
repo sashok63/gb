@@ -1,18 +1,17 @@
-#include "window.hpp"
 #include "gameboy.hpp"
 #include "cpu.hpp"
+#include "ppu.hpp"
 
 auto main(int /*argc*/, char */*argv*/[]) -> int
 {
-    SDL2 sdl("GameBoy Emulator");
-
     auto bus = make_shared<MemoryBus>();
     auto flags = make_shared<FlagsRegister>();
     auto regs = make_shared<Registers>(bus, flags);
     auto inst = make_unique<Instruction>(regs);
     auto cpu = make_unique<CPU>(regs, move(inst));
+    auto ppu = make_unique<PPU>(bus);
 
-    if (!sdl.init()) return 1;
+    ppu->init();
 
     GameBoy gb = {RUNNING};
 
@@ -25,8 +24,10 @@ auto main(int /*argc*/, char */*argv*/[]) -> int
 
         cpu->step();
         
-        sdl.draw();
+        ppu->draw();
     }
+
+    ppu->quit();
 
     return 0;
 }

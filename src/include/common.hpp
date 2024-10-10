@@ -2,6 +2,7 @@
 #define COMMON_HPP
 
 #include <iostream>
+#include <fstream>
 #include <cstdint>
 #include <stdexcept>
 #include <array>

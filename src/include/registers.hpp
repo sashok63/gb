@@ -54,39 +54,39 @@ public:
     auto get_bus() const -> MemoryBus* { return bus.get(); }
     auto get_flag() const -> FlagsRegister* { return flags.get(); }
 
-    auto get_PC() const noexcept -> u16 { return PC; }
-    auto get_SP() const noexcept -> u16 { return SP; }
+    auto get_PC() const noexcept -> u16;
+    auto get_SP() const noexcept -> u16;
 
-    auto set_PC(u16 value) -> void { PC = value; }
-    auto set_SP(u16 value) -> void { SP = value; }
+    auto set_PC(u16 value) -> void;
+    auto set_SP(u16 value) -> void;
 
-    auto get_a() const noexcept -> u8 { return a; }
-    auto get_b() const noexcept -> u8 { return b; }
-    auto get_c() const noexcept -> u8 { return c; }
-    auto get_d() const noexcept -> u8 { return d; }
-    auto get_e() const noexcept -> u8 { return e; }
-    auto get_f() const noexcept -> u8 { return f; }
-    auto get_h() const noexcept -> u8 { return h; }
-    auto get_l() const noexcept -> u8 { return l; }
+    auto get_a() const noexcept -> u8;
+    auto get_b() const noexcept -> u8;
+    auto get_c() const noexcept -> u8;
+    auto get_d() const noexcept -> u8;
+    auto get_e() const noexcept -> u8;
+    auto get_f() const noexcept -> u8;
+    auto get_h() const noexcept -> u8;
+    auto get_l() const noexcept -> u8;
 
-    auto set_a(u8 value) -> void { a = value; }
-    auto set_b(u8 value) -> void { b = value; }
-    auto set_c(u8 value) -> void { c = value; }
-    auto set_d(u8 value) -> void { d = value; }
-    auto set_e(u8 value) -> void { e = value; }
-    auto set_f(u8 value) -> void { f = value; }
-    auto set_h(u8 value) -> void { h = value; }
-    auto set_l(u8 value) -> void { l = value; }
+    auto set_a(u8 value) -> void;
+    auto set_b(u8 value) -> void;
+    auto set_c(u8 value) -> void;
+    auto set_d(u8 value) -> void;
+    auto set_e(u8 value) -> void;
+    auto set_f(u8 value) -> void;
+    auto set_h(u8 value) -> void;
+    auto set_l(u8 value) -> void;
 
-    auto get_AF() const noexcept -> u16 { return static_cast<u16>(a) << 8 | f; }
-    auto get_BC() const noexcept -> u16 { return static_cast<u16>(b) << 8 | c; }
-    auto get_DE() const noexcept -> u16 { return static_cast<u16>(d) << 8 | e; }
-    auto get_HL() const noexcept -> u16 { return static_cast<u16>(h) << 8 | l; }
+    auto get_AF() const noexcept -> u16;
+    auto get_BC() const noexcept -> u16;
+    auto get_DE() const noexcept -> u16;
+    auto get_HL() const noexcept -> u16;
 
-    auto set_AF(u16 value) -> void { a = static_cast<u8>((value & 0xFF00) >> 8); f = static_cast<u8>(value & 0xFF); };
-    auto set_BC(u16 value) -> void { b = static_cast<u8>((value & 0xFF00) >> 8); c = static_cast<u8>(value & 0xFF); };
-    auto set_DE(u16 value) -> void { d = static_cast<u8>((value & 0xFF00) >> 8); e = static_cast<u8>(value & 0xFF); };
-    auto set_HL(u16 value) -> void { h = static_cast<u8>((value & 0xFF00) >> 8); l = static_cast<u8>(value & 0xFF); };
+    auto set_AF(u16 value) -> void;
+    auto set_BC(u16 value) -> void;
+    auto set_DE(u16 value) -> void;
+    auto set_HL(u16 value) -> void;
 
     auto read_next_byte() -> u8;
     auto read_next_world() -> u16;

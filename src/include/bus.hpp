@@ -1,23 +1,22 @@
 #ifndef BUS_HPP
 #define BUS_HPP
 
-#include <fstream>
-#include <stdexcept>
 #include "common.hpp"
-#include "gpu.hpp"
+#include "cart.hpp"
 
 class MemoryBus {
-public:
+private: 
     static constexpr u32 GAMEBOY_MEM = 0x10000;
     static constexpr u16 BOOT_DMG = 0x00000;
     static constexpr u16 BOOT_DMG_SIZE = 0x00100;
+    static constexpr u16 BOOT_DMG_TEST_SIZE = 0x0FFFF;
 
-    array<u8, GAMEBOY_MEM> memory = {};
-private: 
+    // array<u8, GAMEBOY_MEM> memory = {};
+
     unique_ptr<Cartridge> cart;
-    // GPU *gpu = nullptr;
 
 public:    
+    array<u8, GAMEBOY_MEM> memory = {};
     MemoryBus() = default;
     ~MemoryBus() = default;
 
@@ -30,8 +29,8 @@ public:
            }
        }
 
-    auto read_byte(u16 address) const noexcept -> u8 { return memory[address]; }
-    auto write_byte(u16 address, u8 value) -> void { memory[address] = value; }
+    auto read_byte(u16 address) const noexcept -> u8;
+    auto write_byte(u16 address, u8 value) -> void;
 
     auto load_boot_dmg() -> void;    
 };

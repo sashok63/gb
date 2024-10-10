@@ -13,6 +13,7 @@ public:
     bool is_halted = false;
     
 private:
+    u8 instruction_byte = 0;
     u16 div_clocksum = 0;
     u32 timer_clocksum = 0;
 
