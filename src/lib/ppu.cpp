@@ -7,17 +7,17 @@ auto PPU::init() -> void
         SDL_Log("SDL_Init Error: %s", SDL_GetError());
     }
 
-    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-
     window = SDL_CreateWindow("GameBoy Emulator",
                               SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE,
+                              SCREEN_WIDTH, SCREEN_HEIGHT,
                               SDL_WINDOW_RESIZABLE);
     if (!window)
     {
         SDL_Log("Failed to create window: %s", SDL_GetError());
         SDL_Quit();
     }
+
+    SDL_SetWindowSize(window, SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE);
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer)
@@ -53,11 +53,11 @@ auto PPU::draw() -> void
             u32 yoff_a = row * 256 * PIXEL_SIZE;
             u32 xoff_a = row * PIXEL_SIZE;
 
-            u8 tile_id = bus->memory[tilemap + (row / 8) * 32 + (col / 8)];
-            u8 tile_line = bus->memory[tiledata + (tile_id * 16) + (row % 8) * 2];
+            u8 tile_id = bus->get_memory(tilemap + (row / 8) * 32 + (col / 8));
+            u8 tile_line = bus->get_memory(tiledata + (tile_id * 16) + (row % 8) * 2);
             u8 color_value = (tile_line >> (7 - (col % 8))) & 1;
 
-            u8 color_from_palette = (bus->memory[0xFF47] >> (color_value * 2)) & 0x03;
+            u8 color_from_palette = (bus->get_memory(0xFF47) >> (color_value * 2)) & 0x03;
 
             bg_map_a[yoff_a + xoff_a] = COLORS[color_from_palette * 3];
             bg_map_a[yoff_a + xoff_a + 1] = COLORS[color_from_palette * 3 + 1];
@@ -82,8 +82,8 @@ auto PPU::draw() -> void
             frame_buffer_RGBA[frame_buffer_id_x + 3] = bg_map_a[yoff_a + xoff_a + 3];
         }
     }
+
     SDL_UpdateTexture(texture, nullptr, frame_buffer_RGBA.data(), SCREEN_WIDTH * PIXEL_SIZE);
-    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
     SDL_RenderPresent(renderer);
 }
@@ -98,6 +98,6 @@ auto PPU::quit() -> void
 
 auto PPU::setup_tilemap_and_tiledata() -> void
 {
-    tilemap = (((bus->memory[0xFF40] >> 3) & 1) == 1) ? 0x9C00 : 0x9800;
-    tiledata = (((bus->memory[0xFF40] >> 4) & 1) == 1) ? 0x8000 : 0x8800;
+    tilemap = (((bus->get_memory(0xFF40) >> 3) & 1) == 1) ? 0x9C00 : 0x9800;
+    tiledata = (((bus->get_memory(0xFF40) >> 4) & 1) == 1) ? 0x8000 : 0x8800;
 }

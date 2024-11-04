@@ -4,13 +4,26 @@
 #include "common.hpp"
 #include "bus.hpp"
 
-enum class ArithmeticTarget {
-	A, B, C, D, E, H, L,
-	AF, BC, DE, HL, HLI,
-	SP,
+enum class ArithmeticTarget
+{
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    AF,
+    BC,
+    DE,
+    HL,
+    HLI,
+    SP,
+    N8,
 };
 
-class FlagsRegister {
+class FlagsRegister
+{
 public:
     bool zero = false;
     bool subtract = false;
@@ -21,11 +34,12 @@ public:
     ~FlagsRegister() = default;
 };
 
-class Registers {
+class Registers
+{
 private:
-    u16 PC = 0;
+    mutable u16 PC = 0;
     u16 SP = 0;
-    
+
     u8 a = 0;
     u8 b = 0;
     u8 c = 0;
@@ -33,26 +47,25 @@ private:
     u8 e = 0;
     u8 f = 0;
     u8 h = 0;
-    u8 l = 0;  
+    u8 l = 0;
 
-    shared_ptr<MemoryBus> bus;
-    shared_ptr<FlagsRegister> flags;
+    MemoryBus *bus = nullptr;
+    FlagsRegister *flags = nullptr;
 
 public:
     Registers() = default;
-    ~Registers() = default;
 
-    Registers(shared_ptr<MemoryBus> bus_ptr, shared_ptr<FlagsRegister> flags_ptr)
+    Registers(MemoryBus *bus_ptr, FlagsRegister *flags_ptr)
         : bus(bus_ptr), flags(flags_ptr)
+    {
+        if (!bus || !flags)
         {
-            if (!bus || !flags)
-            {
-                throw runtime_error("Null pointer provided to Registers constructor");
-            }
+            throw runtime_error("Null pointer provided to Registers constructor");
         }
+    }
 
-    auto get_bus() const -> MemoryBus* { return bus.get(); }
-    auto get_flag() const -> FlagsRegister* { return flags.get(); }
+    auto get_bus() const -> MemoryBus * { return bus; }
+    auto get_flag() const -> FlagsRegister * { return flags; }
 
     auto get_PC() const noexcept -> u16;
     auto get_SP() const noexcept -> u16;
@@ -78,6 +91,8 @@ public:
     auto set_h(u8 value) -> void;
     auto set_l(u8 value) -> void;
 
+    auto update_flag_register() -> void;
+
     auto get_AF() const noexcept -> u16;
     auto get_BC() const noexcept -> u16;
     auto get_DE() const noexcept -> u16;
@@ -88,13 +103,13 @@ public:
     auto set_DE(u16 value) -> void;
     auto set_HL(u16 value) -> void;
 
-    auto read_next_byte() -> u8;
-    auto read_next_world() -> u16;
-    
+    auto read_next_byte() const noexcept -> u8;
+    auto read_next_world() const noexcept -> u16;
+
     auto get_register(ArithmeticTarget target) const -> u8;
     auto set_register(ArithmeticTarget target, u8 value) -> void;
     auto get_register_pair(ArithmeticTarget target) const -> u16;
     auto set_register_pair(ArithmeticTarget target, u16 value) -> void;
 };
 
-#endif    //REGISTERS_HPP
+#endif // REGISTERS_HPP

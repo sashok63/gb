@@ -2,16 +2,25 @@
 #include "cpu.hpp"
 #include "ppu.hpp"
 
-auto main(int /*argc*/, char */*argv*/[]) -> int
-{
-    auto bus = make_shared<MemoryBus>();
-    auto flags = make_shared<FlagsRegister>();
-    auto regs = make_shared<Registers>(bus, flags);
-    auto inst = make_unique<Instruction>(regs);
-    auto cpu = make_unique<CPU>(regs, move(inst));
-    auto ppu = make_unique<PPU>(bus);
+#include <csignal>
 
-    ppu->init();
+void signalHandler(int signum)
+{
+    cout << "Interrupt signal (" << signum << ") received.\n";
+    exit(signum);
+}
+
+auto main(int /*argc*/, char * /*argv*/[]) -> int
+{
+    signal(SIGINT, signalHandler);
+
+    Cartridge *cart = new Cartridge();
+    MemoryBus *bus = new MemoryBus(cart);
+    FlagsRegister *flags = new FlagsRegister();
+    Registers *regs = new Registers(bus, flags);
+    Instruction *inst = new Instruction(regs);
+    PPU *ppu = new PPU(bus);
+    CPU *cpu = new CPU(regs, inst, ppu);
 
     GameBoy gb = {RUNNING};
 
@@ -23,11 +32,16 @@ auto main(int /*argc*/, char */*argv*/[]) -> int
         } while (gb.state == PAUSED);
 
         cpu->step();
-        
-        ppu->draw();
     }
 
     ppu->quit();
+
+    delete cpu;
+    delete inst;
+    delete regs;
+    delete flags;
+    delete ppu;
+    delete bus;
 
     return 0;
 }

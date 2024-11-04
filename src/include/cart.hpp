@@ -3,15 +3,15 @@
 
 #include "common.hpp"
 
-class Cartridge {
+class Cartridge
+{
 private:
-    u8 test = 0;
+    static const array<u8, 0x30> nintendo_logo;
 
 public:
     Cartridge() = default;
-    ~Cartridge() = default;
 
-    auto test_() -> void;    
+    auto get_nintedo_logo() const -> const array<u8, 0x30> & { return nintendo_logo; }
 };
 
-#endif    //CART_HPP
+#endif // CART_HPP
