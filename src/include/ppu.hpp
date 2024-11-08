@@ -8,12 +8,18 @@
 class PPU
 {
 private:
-    u8 tilemap = 0;
-    u8 tiledata = 0;
+    u16 ppu_cycle = 0;
 
-    array<u8, 160 * 144 * 3> frame_buffer_RGB = {};  // RGB24, 160X144, 3 bytes per pixel
-    array<u8, 160 * 144 * 4> frame_buffer_RGBA = {}; // RGBA24, 160X144, 4 bytes per pixel
-    array<u8, 160 * 256 * 4> bg_map_a = {};
+    u8 state = 2;
+    u8 last_state = 0;
+
+    bool line_calc_flag = 0;
+    bool frame_drawn_flag = 0;
+
+    array<u8, 160 * 144 * 4> frame_buffer_a = {}; // 160X144, 4 bytes per pixel, RGB24A
+    array<u8, 256 * 256 * 4> bg_map_a = {};          // 256X256, 4 bytes per pixel, RGB24A
+    array<u8, 256 * 256 * 4> win_map_a = {};         // 256X256, 4 bytes per pixel, RGB24A
+    array<u8, 256 * 256 * 4> sprite_map_a = {};      // 256X256, 4 bytes per pixel, RGB24A
 
     constexpr static u8 SCREEN_WIDTH = 160;
     constexpr static u8 SCREEN_HEIGHT = 144;
@@ -22,10 +28,10 @@ private:
     constexpr static u8 PIXEL_SIZE = 4;
     constexpr static u8 SCALE = 3;
     constexpr static array<u8, 12> COLORS = {
-        255, 255, 255,
-        192, 192, 192,
-        96, 96, 96,
-        0, 0, 0};
+        0xFF, 0xFF, 0xFF,
+        0xAA, 0xAA, 0xAA,
+        0x55, 0x55, 0x55,
+        0x00, 0x00, 0x00};
 
     SDL_Renderer *renderer;
     SDL_Window *window;
@@ -43,16 +49,15 @@ public:
         {
             throw runtime_error("Null pointer provided to PPU constructor");
         }
-
-        init();
-
-        setup_tilemap_and_tiledata();
     }
 
     auto init() -> void;
-    auto draw() -> void;
+    auto calc_bg(u8 row) -> void;
+    auto calc_window(u8 row) -> void;
+    auto calc_sprite(u8 row) -> void;
+    auto draw_frame() -> void;
+    auto step(u8 cycle) -> void;
     auto quit() -> void;
-    auto setup_tilemap_and_tiledata() -> void;
 };
 
 #endif // GPU_HPP

@@ -489,6 +489,7 @@ auto CPU::step() -> void
 
     // Implement cycles in cpu(step)
     timer(cycle * 4); // Pass the T-cycle equivalent
+    ppu->step(cycle * 4);
     interrupts();
 
     if (registers->get_PC() == 0x00F7)
@@ -606,9 +607,6 @@ auto CPU::interrupts() -> void
 
                 // Clear the V-Blank interrupt flag in IF
                 registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 0));
-
-                // Call the draw method on the PPU
-                ppu->draw();
 
                 inst->IME = 0;
                 return;
