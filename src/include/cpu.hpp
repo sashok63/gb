@@ -37,7 +37,7 @@ public:
 
         registers->get_bus()->load_boot_dmg();
         registers->set_PC(0x0000);
-        ppu->init();
+        // ppu->init();
     }
 
     auto log_state(const string &stage, u8 instruction_byte, bool prefixed) -> void;

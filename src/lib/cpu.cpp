@@ -473,14 +473,14 @@ auto CPU::step() -> void
     const Instruction *inst = Instruction::from_byte(instruction_byte, prefixed);
     if (inst != nullptr)
     {
-        // log_state("Before execute", instruction_byte, prefixed);
+        log_state("Before execute", instruction_byte, prefixed);
         cycle = execute(*inst);
         registers->set_PC(registers->get_PC() + (prefixed ? 2 : 1));
         if (prefixed)
         {
             cycle += 1;
         }
-        // log_state("After execute", instruction_byte, prefixed);
+        log_state("After execute", instruction_byte, prefixed);
     }
     else
     {
@@ -488,11 +488,11 @@ auto CPU::step() -> void
     }
 
     // Implement cycles in cpu(step)
-    timer(cycle * 4); // Pass the T-cycle equivalent
-    ppu->step(cycle * 4);
+    timer(cycle * 4);     // Pass the M-cycle
+    ppu->step(cycle * 4); // Pass the M-cycle
     interrupts();
 
-    if (registers->get_PC() == 0x00F7)
+    if (registers->get_PC() == 0x00FA)
     {
         cout << "Reached" << endl;
         exit(0);
@@ -511,23 +511,23 @@ auto CPU::timer(u8 cycle) -> void
 {
     // Update DIV register (increment every 256 cycles)
     div_clocksum += cycle;
-    if (div_clocksum >= 256)
+    if (div_clocksum >= 64)
     {
-        div_clocksum -= 256;
+        div_clocksum -= 64;
         registers->get_bus()->write_byte(0xFF04, registers->get_bus()->read_byte(0xFF04) + 1);
     }
 
     // Check if timer is enabled (TAC bit 2)
     if ((registers->get_bus()->read_byte(0xFF07) >> 2) & 0x1)
     {
-        timer_clocksum += cycle * 4;
+        timer_clocksum += cycle;
 
         // u32 freq_lut[4] = {4096, 262144, 65536, 16384}; // Should be
-        u32 freq_lut[4] = {262144, 4096, 65536, 16384};
+        u32 freq_lut[4] = {262144 / 4, 4096 / 4, 65536 / 4, 16384 / 4}; // Divide by 4 to convert to M-cycles
         u32 freq = freq_lut[registers->get_bus()->read_byte(0xFF07) & 3];
 
         // Increment TIMA when enough cycles have passed
-        while (timer_clocksum >= (4194304 / freq))
+        while (timer_clocksum >= (1048576 / freq)) // 4194304 T-cycles / 4 = 1048576 M-cycles
         {
             u8 tima = registers->get_bus()->read_byte(0xFF05);
             registers->get_bus()->write_byte(0xFF05, tima + 1);
@@ -540,47 +540,47 @@ auto CPU::timer(u8 cycle) -> void
                 // Reload TIMA from TMA
                 registers->get_bus()->write_byte(0xFF05, registers->get_bus()->read_byte(0xFF06));
             }
-            timer_clocksum -= (4194304 / freq);
+            timer_clocksum -= (1048576 / freq); // 4194304 T-cycles / 4 = 1048576 M-cycles
         }
     }
 
-    // Handle LY register
-    ly_clocksum += cycle;
-    if (ly_clocksum >= 456) // Each scanline takes 456 cycles
-    {
-        ly_clocksum -= 456;
+    // // Handle LY register
+    // ly_clocksum += cycle;
+    // if (ly_clocksum >= 114) // Each scanline takes 456 cycles
+    // {
+    //     ly_clocksum -= 114;
 
-        u8 ly = registers->get_bus()->read_byte(0xFF44);
-        ly = (ly + 1) % 154; // LY goes from 0 to 153
-        registers->get_bus()->write_byte(0xFF44, ly);
+    //     u8 ly = registers->get_bus()->read_byte(0xFF44);
+    //     ly = (ly + 1) % 154; // LY goes from 0 to 153
+    //     registers->get_bus()->write_byte(0xFF44, ly);
 
-        // Check for LY == LYC coincidence and update STAT register (0xFF41)
-        u8 lyc = registers->get_bus()->read_byte(0xFF45);
-        u8 stat = registers->get_bus()->read_byte(0xFF41);
-        if (ly == lyc)
-        {
-            // Set the coincidence flag (bit 2)
-            stat |= (1 << 2);
+    //     // Check for LY == LYC coincidence and update STAT register (0xFF41)
+    //     u8 lyc = registers->get_bus()->read_byte(0xFF45);
+    //     u8 stat = registers->get_bus()->read_byte(0xFF41);
+    //     if (ly == lyc)
+    //     {
+    //         // Set the coincidence flag (bit 2)
+    //         stat |= (1 << 2);
 
-            // Trigger LCD STAT interrupt if coincidence interrupt is enabled (bit 6)
-            if (stat & (1 << 6))
-            {
-                registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x2); // STAT interrupt
-            }
-        }
-        else
-        {
-            // Clear the coincidence flag (bit 2)
-            stat &= ~(1 << 2);
-        }
-        registers->get_bus()->write_byte(0xFF41, stat);
+    //         // Trigger LCD STAT interrupt if coincidence interrupt is enabled (bit 6)
+    //         if (stat & (1 << 6))
+    //         {
+    //             registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x2); // STAT interrupt
+    //         }
+    //     }
+    //     else
+    //     {
+    //         // Clear the coincidence flag (bit 2)
+    //         stat &= ~(1 << 2);
+    //     }
+    //     registers->get_bus()->write_byte(0xFF41, stat);
 
-        // Trigger V-Blank interrupt if LY == 144
-        if (ly == 144)
-        {
-            registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x1); // V-Blank interrupt
-        }
-    }
+    //     // Trigger V-Blank interrupt if LY == 144
+    //     if (ly == 144)
+    //     {
+    //         registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x1); // V-Blank interrupt
+    //     }
+    // }
 }
 
 auto CPU::interrupts() -> void
@@ -693,29 +693,39 @@ auto CPU::interrupts() -> void
 
 auto CPU::log_state(const string &stage, u8 instruction_byte, bool prefixed) -> void
 {
+    ofstream log_file("cpu_log.txt", ios::app);
+    if (!log_file.is_open())
+    {
+        cerr << "Error opening log file !" << endl;
+        return;
+    }
+
     // Debug output
-    cout << "[" << stage << "] PC: 0x" << hex << setw(4) << setfill('0') << static_cast<u16>(registers->get_PC())
-         << " | SP: 0x" << hex << setw(4) << setfill('0') << static_cast<u16>(registers->get_SP())
-         << " | Instruction: 0x" << hex << setw(2) << setfill('0') << static_cast<u16>(instruction_byte)
-         << " | Prefix: 0x" << hex << setw(1) << setfill('0') << static_cast<u16>(prefixed)
-         << std::endl;
+    log_file << "[" << stage << "] PC: 0x" << hex << setw(4) << setfill('0') << static_cast<u16>(registers->get_PC())
+             << " | SP: 0x" << hex << setw(4) << setfill('0') << static_cast<u16>(registers->get_SP())
+             << " | Instruction: 0x" << hex << setw(2) << setfill('0') << static_cast<u16>(instruction_byte)
+             << " | Prefix: 0x" << hex << setw(1) << setfill('0') << static_cast<u16>(prefixed)
+             << std::endl;
 
     // cout << "Memory write to: " << address << " | Value: " << value << endl;
 
-    cout << "Regs: A = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_a())
-         << ", F = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_f())
-         << ", B = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_b())
-         << ", C = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_c())
-         << ", D = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_d())
-         << ", E = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_e())
-         << ", H = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_h())
-         << ", L = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_l())
-         << ", LY = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF44))
-         << ", Timer = " << hex << setw(2) << setfill('0') << static_cast<u16>(div_clocksum)
-         << " | Zero: " << registers->get_flag()->zero
-         << " | Sub: " << registers->get_flag()->subtract
-         << " | Half-Carry: " << registers->get_flag()->half_carry
-         << " | Carry: " << registers->get_flag()->carry
-         << endl;
+    log_file << "Regs: A = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_a())
+             << ", F = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_f())
+             << ", B = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_b())
+             << ", C = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_c())
+             << ", D = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_d())
+             << ", E = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_e())
+             << ", H = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_h())
+             << ", L = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_l())
+             << ", LY = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF44))
+             << ", Timer = " << hex << setw(2) << setfill('0') << static_cast<u16>(div_clocksum)
+             << ", PPU_Timer = " << hex << setw(2) << setfill('0') << static_cast<u16>(ppu->get_ppu_cycle())
+             << " | Z: " << registers->get_flag()->zero
+             << " | S: " << registers->get_flag()->subtract
+             << " | H-C: " << registers->get_flag()->half_carry
+             << " | C: " << registers->get_flag()->carry
+             << endl;
     // Debug output
+
+    log_file.close();
 }

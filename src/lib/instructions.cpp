@@ -7,8 +7,8 @@ auto Instruction::add_inst(u8 value) -> u8
 
     registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = (result > 0xFF);
-    registers->get_flag()->carry = ((registers->get_a() & 0xF) + (value & 0xF) > 0xF);
+    registers->get_flag()->half_carry = ((registers->get_a() & 0xF) + (value & 0xF) > 0xF);
+    registers->get_flag()->carry = (result > 0xFF);
 
     registers->update_flag_register();
 
