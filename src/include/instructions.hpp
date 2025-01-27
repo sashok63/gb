@@ -120,7 +120,6 @@ class Instruction
 public:
     u8 bit = 0;
     u8 N8_value = 0;
-    u8 IME = 0;
 
 private:
     InstructionType type;
@@ -196,16 +195,16 @@ public:
     auto rlca_inst() -> void;
     auto cpl_inst() -> void;
     auto bit_inst(u8 bit, u8 value) -> void;
-    auto res_inst(u8 bit, u8 value) -> void;
-    auto set_inst(u8 bit, u8 value) -> void;
-    auto srl_inst(u8 value) -> void;
-    auto rr_inst(u8 value) -> void;
-    auto rl_inst(u8 value) -> void;
-    auto rrc_inst(u8 value) -> void;
-    auto rlc_inst(u8 value) -> void;
-    auto sra_inst(u8 value) -> void;
-    auto sla_inst(u8 value) -> void;
-    auto swap_inst(u8 value) -> void;
+    auto res_inst(u8 bit, u8 value) -> u8;
+    auto set_inst(u8 bit, u8 value) -> u8;
+    auto srl_inst(u8 value) -> u8;
+    auto rr_inst(u8 value) -> u8;
+    auto rl_inst(u8 value) -> u8;
+    auto rrc_inst(u8 value) -> u8;
+    auto rlc_inst(u8 value) -> u8;
+    auto sra_inst(u8 value) -> u8;
+    auto sla_inst(u8 value) -> u8;
+    auto swap_inst(u8 value) -> u8;
     auto jp_inst(bool should_jump) -> void;
     auto jr_inst(bool should_jump) -> void;
     auto jpi_inst() -> void;

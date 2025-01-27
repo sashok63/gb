@@ -262,3 +262,67 @@ auto Registers::set_register_pair(ArithmeticTarget target, u16 value) -> void
         throw runtime_error("Unknown target at set_register_pair: " + to_string(static_cast<int>(target)));
     }
 }
+
+auto Registers::get_IME() -> u8
+{
+    return IME;
+}
+
+auto Registers::set_IME(u8 value) -> void
+{
+    IME = value;
+}
+
+auto Registers::get_is_halted() -> u8
+{
+    return is_halted;
+}
+
+auto Registers::set_is_halted(u8 value) -> void
+{
+    is_halted = value;
+}
+
+auto Registers::set_interrupt_flag(u8 flag) -> void
+{
+    u8 IF_value = get_bus()->read_byte(0xFF0F);
+    IF_value |= flag;
+    return get_bus()->write_byte(0xFF0F, IF_value);
+}
+
+auto Registers::unset_interrupt_flag(u8 flag) -> void
+{
+    u8 IF_value = get_bus()->read_byte(0xFF0F);
+    IF_value &= ~flag;
+    return get_bus()->write_byte(0xFF0F, IF_value);
+}
+
+auto Registers::is_interrupt_enabled(u8 flag) -> u8
+{
+    return get_bus()->read_byte(0xFFFF) & flag;
+}
+
+auto Registers::is_interrupt_flag_set(u8 flag) -> u8
+{
+    return get_bus()->read_byte(0xFF0F) & flag;
+}
+
+auto Registers::trigger_interrupt(u8 flag, u8 value) -> void
+{
+    // Push PC to short stack
+    SP -= 2;
+    get_bus()->write_byte(SP, static_cast<u8>(PC & 0x00FF));
+    get_bus()->write_byte(SP + 1, static_cast<u8>((PC & 0xFF00) >> 8));
+
+    // Set PC to (V-Blank/LCD/Timer Overflow/Joypad) interrupt vector
+    PC = value;
+
+    // Reset Interrupt Master Enable flag
+    IME = 0;
+
+    // Clear the (V-Blank/LCD/Timer Overflow/Joypad) interrupt flag in IF
+    unset_interrupt_flag(flag);
+
+    // Disable halt
+    is_halted = 0;
+}

@@ -19,7 +19,7 @@ auto main(int /*argc*/, char * /*argv*/[]) -> int
     FlagsRegister *flags = new FlagsRegister();
     Registers *regs = new Registers(bus, flags);
     Instruction *inst = new Instruction(regs);
-    PPU *ppu = new PPU(bus);
+    PPU *ppu = new PPU(bus, regs);
     CPU *cpu = new CPU(regs, inst, ppu);
 
     GameBoy gb = {RUNNING};

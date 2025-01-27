@@ -1,9 +1,75 @@
 #include "cpu.hpp"
 
+CPU::CPU(Registers *regs_ptr, Instruction *inst_ptr, PPU *ppu_ptr)
+    : registers(regs_ptr), inst(inst_ptr), ppu(ppu_ptr)
+{
+    if (!registers || !inst || !ppu)
+    {
+        throw runtime_error("Null pointer provided to CPU constructor");
+    }
+
+    div = &registers->get_bus()->get_memory(0xFF04);
+    tima = &registers->get_bus()->get_memory(0xFF05);
+    tma = &registers->get_bus()->get_memory(0xFF06);
+    tac = &registers->get_bus()->get_memory(0xFF07);
+
+    registers->get_bus()->load_boot_dmg();
+    registers->set_PC(0x0000);
+    // load_cpu_without_bootdmg();
+    // registers->get_bus()->load_test();
+};
+
+auto CPU::load_cpu_without_bootdmg() -> void
+{
+    registers->set_a(0x01);
+    registers->set_f(0xB0);
+    registers->set_b(0x00);
+    registers->set_c(0x13);
+    registers->set_d(0x00);
+    registers->set_e(0xD8);
+    registers->set_h(0x01);
+    registers->set_l(0x4D);
+
+    registers->set_PC(0x0100);
+    registers->set_SP(0xFFFE);
+
+    registers->get_flag()->zero = true;
+    registers->get_flag()->carry = true;
+    registers->get_flag()->half_carry = true;
+    registers->get_flag()->subtract = false;
+
+    registers->set_IME(1);
+
+    registers->get_bus()->write_byte(0xFF0F, 0xE1);
+    registers->get_bus()->write_byte(0xFF10, 0x80);
+	registers->get_bus()->write_byte(0xFF11, 0xBF);
+	registers->get_bus()->write_byte(0xFF12, 0xF3);
+	registers->get_bus()->write_byte(0xFF14, 0xBF);
+	registers->get_bus()->write_byte(0xFF16, 0x3F);
+	registers->get_bus()->write_byte(0xFF17, 0x00);
+	registers->get_bus()->write_byte(0xFF19, 0xBF);
+	registers->get_bus()->write_byte(0xFF1A, 0x7A);
+	registers->get_bus()->write_byte(0xFF1B, 0xFF);
+	registers->get_bus()->write_byte(0xFF1C, 0x9F);
+	registers->get_bus()->write_byte(0xFF1E, 0xBF);
+	registers->get_bus()->write_byte(0xFF20, 0xFF);
+	registers->get_bus()->write_byte(0xFF23, 0xBF);
+	registers->get_bus()->write_byte(0xFF24, 0x77);
+	registers->get_bus()->write_byte(0xFF25, 0xF3);
+	registers->get_bus()->write_byte(0xFF26, 0xF1);
+	registers->get_bus()->write_byte(0xFF40, 0x91);
+    registers->get_bus()->write_byte(0xFF41, 0x80);
+	registers->get_bus()->write_byte(0xFF47, 0xFC);
+	registers->get_bus()->write_byte(0xFF48, 0xFF);
+	registers->get_bus()->write_byte(0xFF49, 0xFF);
+
+    // Add timers
+}
+
 auto CPU::execute(const Instruction &instruction) -> u8
 {
-    bool jump_condition = false;
-    u8 cycle = 0;
+    bool jump_condition;
+    u8 cycle;
 
     auto arithmetic_op = [&](auto get_reg, auto set_reg, auto func) -> void
     {
@@ -14,19 +80,17 @@ auto CPU::execute(const Instruction &instruction) -> u8
 
     auto push_inst = [&](u16 value) -> void
     {
-        u16 sp = registers->get_SP();
-        registers->set_SP(sp - 2);
+        registers->set_SP(registers->get_SP() - 2);
 
-        registers->get_bus()->write_byte(registers->get_SP() + 1, static_cast<u8>((value >> 8) & 0xFF));
-        registers->get_bus()->write_byte(registers->get_SP(), static_cast<u8>(value & 0xFF));
+        registers->get_bus()->write_byte(registers->get_SP(), static_cast<u8>(value & 0x00FF));
+        registers->get_bus()->write_byte(registers->get_SP() + 1, static_cast<u8>((value & 0xFF00) >> 8));
     };
 
     auto pop_inst = [&]() -> u16
     {
         u16 value = static_cast<u16>(registers->get_bus()->read_byte(registers->get_SP())) |
                     (static_cast<u16>(registers->get_bus()->read_byte(registers->get_SP() + 1)) << 8);
-        u16 sp = registers->get_SP();
-        registers->set_SP(sp + 2);
+        registers->set_SP(registers->get_SP() + 2);
         return value;
     };
 
@@ -271,52 +335,128 @@ auto CPU::execute(const Instruction &instruction) -> u8
         return cycle;
 
     case InstructionType::RES:
-        inst->res_inst(instruction.bit, registers->get_register(instruction.get_arithmetic_target()));
+    {
+        u8 bit = instruction.bit;
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this, bit](u8 value)
+            { return inst->res_inst(bit, value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
+    }
 
     case InstructionType::SET:
-        inst->set_inst(instruction.bit, registers->get_register(instruction.get_arithmetic_target()));
+    {
+        u8 bit = instruction.bit;
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this, bit](u8 value)
+            { return inst->set_inst(bit, value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
+    }
 
     case InstructionType::SRL:
-        inst->srl_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->srl_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::RR:
-        inst->rr_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->rr_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::RL:
-        inst->rl_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->rl_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::RRC:
-        inst->rrc_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->rrc_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::RLC:
-        inst->rlc_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->rlc_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::SRA:
-        inst->sra_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->sra_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::SLA:
-        inst->sla_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->sla_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::SWAP:
-        inst->swap_inst(registers->get_register(instruction.get_arithmetic_target()));
+        arithmetic_op(
+            [&]()
+            { return registers->get_register(instruction.get_arithmetic_target()); }, // Getter
+            [&](u8 value)
+            { registers->set_register(instruction.get_arithmetic_target(), value); }, // Setter
+            [this](u8 value)
+            { return inst->swap_inst(value); } // Arithmetic operation
+        );
         cycle = instruction.get_cycle_value();
         return cycle;
 
@@ -334,24 +474,24 @@ auto CPU::execute(const Instruction &instruction) -> u8
         return cycle;
 
     case InstructionType::CALL:
-        inst->IME = 0;
+    {
         jump_condition = inst->check_jump_condition(instruction.get_jump_condition());
+        registers->set_PC(registers->get_PC() + 2);
         if (jump_condition)
         {
-            push_inst(registers->get_PC() + 2);
-            registers->set_PC(registers->get_PC() + 2);
-        }
-        else
-        {
-            registers->set_PC(registers->get_PC() + 2);
+            u16 operand = registers->get_bus()->read_byte(registers->get_PC() - 1) |
+                          (registers->get_bus()->read_byte(registers->get_PC() - 2) >> 8);
+            push_inst(registers->get_PC());
+            registers->set_PC(operand - 1); // Prevent inc in CPU Step
         }
         cycle = jump_condition ? 6 : 3;
         return cycle;
+    }
 
     case InstructionType::RET:
         if (instruction_byte == 0xD9)
         {
-            inst->IME = 1;
+            registers->set_IME(1);
         }
 
         jump_condition = inst->check_jump_condition(instruction.get_jump_condition());
@@ -375,23 +515,21 @@ auto CPU::execute(const Instruction &instruction) -> u8
         return cycle;
 
     case InstructionType::NOP:
-        registers->set_PC(registers->get_PC() + 1);
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::HALT:
-        registers->set_PC(registers->get_PC() + 1);
         // this->is_halted = true;
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::EI:
-        inst->IME = 1;
+        registers->set_IME(1);
         cycle = instruction.get_cycle_value();
         return cycle;
 
     case InstructionType::DI:
-        inst->IME = 0;
+        registers->set_IME(0);
         cycle = instruction.get_cycle_value();
         return cycle;
 
@@ -473,7 +611,7 @@ auto CPU::step() -> void
     const Instruction *inst = Instruction::from_byte(instruction_byte, prefixed);
     if (inst != nullptr)
     {
-        log_state("Before execute", instruction_byte, prefixed);
+        // log_state("Before execute", instruction_byte, prefixed);
         cycle = execute(*inst);
         registers->set_PC(registers->get_PC() + (prefixed ? 2 : 1));
         if (prefixed)
@@ -488,9 +626,14 @@ auto CPU::step() -> void
     }
 
     // Implement cycles in cpu(step)
-    timer(cycle * 4);     // Pass the M-cycle
-    ppu->step(cycle * 4); // Pass the M-cycle
     interrupts();
+    if (interrupt_triggered)
+    {
+        cycle += 5; // Add 5 M-cycles per truggered interrupt
+        interrupt_triggered = 0;
+    }
+    timer(cycle);     // Pass the M-cycle
+    ppu->step(cycle); // Pass the M-cycle
 
     if (registers->get_PC() == 0x00FA)
     {
@@ -509,194 +652,89 @@ auto CPU::step() -> void
 
 auto CPU::timer(u8 cycle) -> void
 {
-    // Update DIV register (increment every 256 cycles)
-    div_clocksum += cycle;
-    if (div_clocksum >= 64)
+    // Update DIV register (increment every 64 M-cycles)
+    *div += cycle;
+    if (*div >= 64)
     {
-        div_clocksum -= 64;
-        registers->get_bus()->write_byte(0xFF04, registers->get_bus()->read_byte(0xFF04) + 1);
+        *div -= 63;
     }
 
     // Check if timer is enabled (TAC bit 2)
-    if ((registers->get_bus()->read_byte(0xFF07) >> 2) & 0x1)
+    if (*tac & 0x4)
     {
-        timer_clocksum += cycle;
+        *tima += cycle;
 
-        // u32 freq_lut[4] = {4096, 262144, 65536, 16384}; // Should be
-        u32 freq_lut[4] = {262144 / 4, 4096 / 4, 65536 / 4, 16384 / 4}; // Divide by 4 to convert to M-cycles
-        u32 freq = freq_lut[registers->get_bus()->read_byte(0xFF07) & 3];
+        u32 freq_lut[4] = {256, 4, 16, 64};
+        u32 freq = freq_lut[*tac & 3];
 
         // Increment TIMA when enough cycles have passed
-        while (timer_clocksum >= (1048576 / freq)) // 4194304 T-cycles / 4 = 1048576 M-cycles
+        while (*tima >= freq)
         {
-            u8 tima = registers->get_bus()->read_byte(0xFF05);
-            registers->get_bus()->write_byte(0xFF05, tima + 1);
+            (*tima)++;
 
             // Check for overflow (TIMA == 0 after increment)
-            if (registers->get_bus()->read_byte(0xFF05) == 0)
+            if (*tima == 0)
             {
                 // Trigger Timer Overflow interrupt
-                registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 4);
+                registers->set_interrupt_flag(INTERRUPT_TIMER);
                 // Reload TIMA from TMA
-                registers->get_bus()->write_byte(0xFF05, registers->get_bus()->read_byte(0xFF06));
+                *tima = *tma;
             }
-            timer_clocksum -= (1048576 / freq); // 4194304 T-cycles / 4 = 1048576 M-cycles
+            *tima -= freq; // Adjust remaining cycles
         }
     }
-
-    // // Handle LY register
-    // ly_clocksum += cycle;
-    // if (ly_clocksum >= 114) // Each scanline takes 456 cycles
-    // {
-    //     ly_clocksum -= 114;
-
-    //     u8 ly = registers->get_bus()->read_byte(0xFF44);
-    //     ly = (ly + 1) % 154; // LY goes from 0 to 153
-    //     registers->get_bus()->write_byte(0xFF44, ly);
-
-    //     // Check for LY == LYC coincidence and update STAT register (0xFF41)
-    //     u8 lyc = registers->get_bus()->read_byte(0xFF45);
-    //     u8 stat = registers->get_bus()->read_byte(0xFF41);
-    //     if (ly == lyc)
-    //     {
-    //         // Set the coincidence flag (bit 2)
-    //         stat |= (1 << 2);
-
-    //         // Trigger LCD STAT interrupt if coincidence interrupt is enabled (bit 6)
-    //         if (stat & (1 << 6))
-    //         {
-    //             registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x2); // STAT interrupt
-    //         }
-    //     }
-    //     else
-    //     {
-    //         // Clear the coincidence flag (bit 2)
-    //         stat &= ~(1 << 2);
-    //     }
-    //     registers->get_bus()->write_byte(0xFF41, stat);
-
-    //     // Trigger V-Blank interrupt if LY == 144
-    //     if (ly == 144)
-    //     {
-    //         registers->get_bus()->write_byte(0xFF0F, registers->get_bus()->read_byte(0xFF0F) | 0x1); // V-Blank interrupt
-    //     }
-    // }
 }
 
 auto CPU::interrupts() -> void
 {
-    if (inst->IME)
+    if (registers->get_bus()->read_byte(0xFFFF) & registers->get_bus()->read_byte(0xFF0F))
     {
-        u8 IE = registers->get_bus()->read_byte(0xFFFF);
-        u8 IF = registers->get_bus()->read_byte(0xFF0F);
-        u8 pending_interrupts = IE & IF;
+        registers->set_is_halted(0);
+    }
 
-        if (pending_interrupts)
-        {
-            // V-Blank interrupt (Bit 0)
-            if (pending_interrupts & (1 << 0))
-            {
-                // Push PC to stack
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() >> 8);
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() & 0xFF);
+    if (registers->is_interrupt_enabled(INTERRUPT_VBANK) && registers->is_interrupt_flag_set(INTERRUPT_VBANK))
+    {
+        registers->trigger_interrupt(INTERRUPT_VBANK, 0x40);
+        interrupt_triggered = 1;
+    }
 
-                // Set PC to V-Blank interrupt vector
-                registers->set_PC(0x0040);
+    if (registers->is_interrupt_enabled(INTERRUPT_LCD) && registers->is_interrupt_flag_set(INTERRUPT_LCD))
+    {
+        registers->trigger_interrupt(INTERRUPT_LCD, 0x48);
+        interrupt_triggered = 1;
+    }
 
-                // Clear the V-Blank interrupt flag in IF
-                registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 0));
+    if (registers->is_interrupt_enabled(INTERRUPT_TIMER) && registers->is_interrupt_flag_set(INTERRUPT_TIMER))
+    {
+        registers->trigger_interrupt(INTERRUPT_TIMER, 0x50);
+        interrupt_triggered = 1;
+    }
 
-                inst->IME = 0;
-                return;
-            }
-
-            // LCD STAT interrupt (Bit 1)
-            if (pending_interrupts & (1 << 1))
-            {
-                // Push PC to stack
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() >> 8);
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() & 0xFF);
-
-                // Set PC to LCD STAT interrupt vector
-                registers->set_PC(0x0048);
-
-                // Clear the LCD STAT interrupt flag in IF
-                registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 1));
-
-                inst->IME = 0;
-                return;
-            }
-
-            // Timer Overflow interrupt (Bit 2)
-            if (pending_interrupts & (1 << 2))
-            {
-                // Push PC to stack
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() >> 8);
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() & 0xFF);
-
-                // Set PC to Timer Overflow interrupt vector
-                registers->set_PC(0x0050);
-
-                // Clear the Timer Overflow interrupt flag in IF
-                registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 2));
-
-                inst->IME = 0;
-                return;
-            }
-
-            // Serial Transfer Completion interrupt (Bit 3)
-            if (pending_interrupts & (1 << 3))
-            {
-                // Push PC to stack
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() >> 8);
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() & 0xFF);
-
-                // Set PC to Serial Transfer Completion interrupt vector
-                registers->set_PC(0x0058);
-
-                // Clear the Serial Transfer Completion interrupt flag in IF
-                registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 3));
-
-                inst->IME = 0;
-                return;
-            }
-
-            // Joypad Input interrupt (Bit 4)
-            if (pending_interrupts & (1 << 4))
-            {
-                // Push PC to stack
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() >> 8);
-                registers->set_SP(registers->get_SP() - 1);
-                registers->get_bus()->write_byte(registers->get_SP(), registers->get_PC() & 0xFF);
-
-                // Set PC to Joypad interrupt vector
-                registers->set_PC(0x0060);
-
-                // Clear the Joypad interrupt flag in IF
-                registers->get_bus()->write_byte(0xFF0F, IF & ~(1 << 4));
-
-                inst->IME = 0;
-                return;
-            }
-        }
+    if (registers->is_interrupt_enabled(INTERRUPT_JOYPAD) && registers->is_interrupt_flag_set(INTERRUPT_JOYPAD))
+    {
+        registers->trigger_interrupt(INTERRUPT_JOYPAD, 0x60);
+        interrupt_triggered = 1;
     }
 }
 
 auto CPU::log_state(const string &stage, u8 instruction_byte, bool prefixed) -> void
 {
-    ofstream log_file("cpu_log.txt", ios::app);
+    static bool is_initialized = false;
+
+    ofstream log_file;
+    if (!is_initialized)
+    {
+        log_file.open("cpu_log.txt", ios::trunc);
+        is_initialized = true;
+    }
+    else
+    {
+        log_file.open("cpu_log.txt", ios::app);
+    }
+
     if (!log_file.is_open())
     {
-        cerr << "Error opening log file !" << endl;
+        cerr << "Error opening log file!" << endl;
         return;
     }
 
@@ -705,6 +743,11 @@ auto CPU::log_state(const string &stage, u8 instruction_byte, bool prefixed) -> 
              << " | SP: 0x" << hex << setw(4) << setfill('0') << static_cast<u16>(registers->get_SP())
              << " | Instruction: 0x" << hex << setw(2) << setfill('0') << static_cast<u16>(instruction_byte)
              << " | Prefix: 0x" << hex << setw(1) << setfill('0') << static_cast<u16>(prefixed)
+             << " | (" << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC()))
+             << " " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 1))
+             << " " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 2))
+             << " " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 3))
+             << ")"
              << std::endl;
 
     // cout << "Memory write to: " << address << " | Value: " << value << endl;
@@ -717,13 +760,22 @@ auto CPU::log_state(const string &stage, u8 instruction_byte, bool prefixed) -> 
              << ", E = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_e())
              << ", H = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_h())
              << ", L = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_l())
-             << ", LY = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF44))
-             << ", Timer = " << hex << setw(2) << setfill('0') << static_cast<u16>(div_clocksum)
-             << ", PPU_Timer = " << hex << setw(2) << setfill('0') << static_cast<u16>(ppu->get_ppu_cycle())
              << " | Z: " << registers->get_flag()->zero
              << " | S: " << registers->get_flag()->subtract
              << " | H-C: " << registers->get_flag()->half_carry
              << " | C: " << registers->get_flag()->carry
+             << endl;
+
+    log_file << "Memory regs: LY = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF44))
+             << ", LYC = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF45))
+             << ", SCY = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF42))
+             << ", SCX = " << hex << setw(2) << setfill('0') << static_cast<u16>(registers->get_bus()->read_byte(0xFF43))
+             << ", LCDC = " << bitset<8>(registers->get_bus()->read_byte(0xFF40))
+             << ", STAT = " << bitset<8>(registers->get_bus()->read_byte(0xFF41))
+             << endl;
+
+    log_file << "Timers: CPU = " << hex << setw(2) << setfill('0') << static_cast<u16>(*div)
+             << ", GPU = " << hex << setw(2) << setfill('0') << static_cast<u16>(ppu->get_ppu_cycle())
              << endl;
     // Debug output
 

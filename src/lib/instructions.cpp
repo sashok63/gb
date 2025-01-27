@@ -2,13 +2,15 @@
 
 auto Instruction::add_inst(u8 value) -> u8
 {
-    u16 result = static_cast<u16>(registers->get_a()) + value;
+    u16 result = static_cast<u16>(registers->get_a() + value);
+
+    registers->get_flag()->carry = (result > 0xFF);
+    registers->get_flag()->half_carry = ((registers->get_a() & 0x0F) + (value & 0x0F)) > 0x0F;
+
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = ((registers->get_a() & 0xF) + (value & 0xF) > 0xF);
-    registers->get_flag()->carry = (result > 0xFF);
 
     registers->update_flag_register();
 
@@ -18,28 +20,30 @@ auto Instruction::add_inst(u8 value) -> u8
 auto Instruction::adc_inst(u8 value) -> u8
 {
     u8 carry = registers->get_flag()->carry ? 1 : 0;
-    u16 result = static_cast<u16>(registers->get_a()) + value + carry;
-    u8 new_value = static_cast<u8>(result);
+    u16 result = static_cast<u16>(registers->get_a() + value + carry);
 
-    registers->get_flag()->zero = (new_value == 0);
+    registers->get_flag()->zero = (static_cast<i8>(result) == 0);
+    registers->get_flag()->carry = (result > 0xFF);
+    registers->get_flag()->half_carry = ((registers->get_a() & 0x0F) + (value & 0x0F) + carry) > 0x0F;
     registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = (registers->get_a() & 0xF) < (value & 0xF);
-    registers->get_flag()->carry = (registers->get_a() < value);
 
     registers->update_flag_register();
+
+    i8 new_value = static_cast<i8>(result & 0xFF);
 
     return new_value;
 }
 
 auto Instruction::sub_inst(u8 value) -> u8
 {
-    u16 result = static_cast<u16>(registers->get_a()) - value;
+    registers->get_flag()->carry = (registers->get_a() < value);
+    registers->get_flag()->half_carry = ((registers->get_a() & 0x0F) < (value & 0x0F));
+
+    u16 result = static_cast<u16>(registers->get_a() - value);
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = true;
-    registers->get_flag()->half_carry = ((registers->get_a() & 0xF) < (value & 0xF));
-    registers->get_flag()->carry = (registers->get_a() < value);
 
     registers->update_flag_register();
 
@@ -49,13 +53,15 @@ auto Instruction::sub_inst(u8 value) -> u8
 auto Instruction::sbc_inst(u8 value) -> u8
 {
     u16 carry = registers->get_flag()->carry ? 1 : 0;
-    u16 result = static_cast<u16>(registers->get_a()) - value - carry;
+
+    registers->get_flag()->carry = (value + carry) > registers->get_a();
+    registers->get_flag()->half_carry = (registers->get_a() & 0x0F) < ((value & 0x0F) + carry);
+
+    u16 result = static_cast<u16>(registers->get_a() - value - carry);
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = true;
-    registers->get_flag()->half_carry = ((registers->get_a() & 0xF) < (value & 0xF) + carry);
-    registers->get_flag()->carry = (result > 0xFF);
 
     registers->update_flag_register();
 
@@ -64,14 +70,13 @@ auto Instruction::sbc_inst(u8 value) -> u8
 
 auto Instruction::and_inst(u8 value) -> u8
 {
-    u8 a = registers->get_a();
-    u16 result = static_cast<u16>(a &= value);
+    u16 result = static_cast<u16>(registers->get_a() & value);
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = true;
     registers->get_flag()->carry = false;
+    registers->get_flag()->half_carry = true;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
 
@@ -80,8 +85,7 @@ auto Instruction::and_inst(u8 value) -> u8
 
 auto Instruction::or_inst(u8 value) -> u8
 {
-    u8 a = registers->get_a();
-    u16 result = static_cast<u16>(a | value);
+    u16 result = static_cast<u16>(registers->get_a() | value);
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
@@ -96,8 +100,7 @@ auto Instruction::or_inst(u8 value) -> u8
 
 auto Instruction::xor_inst(u8 value) -> u8
 {
-    u8 a = registers->get_a();
-    u16 result = static_cast<u16>(a ^ value);
+    u16 result = static_cast<u16>(registers->get_a() ^ value);
     u8 new_value = static_cast<u8>(result);
 
     registers->get_flag()->zero = (new_value == 0);
@@ -112,11 +115,12 @@ auto Instruction::xor_inst(u8 value) -> u8
 
 auto Instruction::inc_inst(u8 value) -> u8
 {
-    value++;
+    registers->get_flag()->half_carry = ((value & 0x0F) == 0x0F);
+
+    value += 1;
 
     registers->get_flag()->zero = (value == 0);
     registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = ((value & 0x0F) == 0x0F);
 
     registers->update_flag_register();
 
@@ -125,12 +129,12 @@ auto Instruction::inc_inst(u8 value) -> u8
 
 auto Instruction::dec_inst(u8 value) -> u8
 {
-    value--;
+    registers->get_flag()->half_carry = ((value & 0x0F) == 0);
 
-    // registers->get_flag()->zero = (value & 0xFF);
-    registers->get_flag()->zero = ((value & 0xFF) == 0);
+    value -= 1;
+
+    registers->get_flag()->zero = (value == 0);
     registers->get_flag()->subtract = true;
-    registers->get_flag()->half_carry = ((value & 0x0F) == 0x0F);
 
     registers->update_flag_register();
 
@@ -139,94 +143,99 @@ auto Instruction::dec_inst(u8 value) -> u8
 
 auto Instruction::cp_inst(u8 value) -> void
 {
-    u16 result = static_cast<u16>(registers->get_a()) - value;
+    u8 a = registers->get_a();
+    registers->get_flag()->carry = (a < value);
+    registers->get_flag()->half_carry = ((a & 0x0F) < (value & 0x0F));
 
-    registers->get_flag()->zero = ((result & 0xFF) == 0);
+    u16 result = static_cast<u16>(a - value);
+
+    registers->get_flag()->zero = (result == 0);
     registers->get_flag()->subtract = true;
-    registers->get_flag()->half_carry = ((registers->get_a() & 0xF) < (value & 0xF));
-    registers->get_flag()->carry = (registers->get_a() < value);
 
     registers->update_flag_register();
 }
 
 auto Instruction::ccf_inst() -> void
 {
-    registers->get_flag()->zero = false;
-    registers->get_flag()->subtract = false;
+    registers->get_flag()->carry = (registers->get_flag()->carry == 0);
     registers->get_flag()->half_carry = false;
-    registers->get_flag()->carry = !registers->get_flag()->carry;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
 }
 
 auto Instruction::scf_inst() -> void
 {
-    registers->get_flag()->zero = false;
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = true;
+    registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
 }
 
 auto Instruction::rra_inst() -> void
 {
-    bool carry_out = registers->get_flag()->carry;
-    bool lsb = (registers->get_a() & 0x01) != 0;
+    u8 a = registers->get_a();
+    u8 carry = registers->get_flag()->carry;
+    registers->get_flag()->carry = (a & 0x01);
 
-    u8 a = (registers->get_a() >> 1) | (carry_out ? 0x80 : 0x00);
+    a = (a >> 1) | (carry << 7);
     registers->set_a(a);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
-    registers->get_flag()->carry = lsb;
 
     registers->update_flag_register();
 }
 
 auto Instruction::rla_inst() -> void
 {
-    bool carry_out = registers->get_flag()->carry;
-    bool msb = (registers->get_a() & 0x80) != 0;
+    u8 a = registers->get_a();
+    u8 carry = registers->get_flag()->carry;
 
-    u8 a = (registers->get_a() << 1) | (carry_out ? 0x01 : 0x00);
+    registers->get_flag()->carry = a & (1 << 7);
+
+    a = (a << 1) + carry;
     registers->set_a(a);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
-    registers->get_flag()->carry = msb;
 
     registers->update_flag_register();
 }
 
 auto Instruction::rrca_inst() -> void
 {
-    bool lsb = (registers->get_a() & 0x01) != 0;
+    u8 a = registers->get_a();
+    u8 carry = a & 0x01;
 
-    u8 a = (registers->get_a() >> 1) | (lsb ? 0x80 : 0x00);
+    registers->get_flag()->carry = carry;
+
+    a = (a >> 1) | (carry << 7);
+
     registers->set_a(a);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
-    registers->get_flag()->carry = lsb;
 
     registers->update_flag_register();
 }
 
 auto Instruction::rlca_inst() -> void
 {
-    bool msb = (registers->get_a() & 0x80) != 0;
+    u8 a = registers->get_a();
+    u8 carry = (a >> 7) & 0x01;
 
-    u8 a = (registers->get_a() << 1) | (msb ? 0x01 : 0x00);
-    registers->set_a(a);
+    registers->get_flag()->carry = a & (1 << 7);
 
-    registers->get_flag()->zero = (registers->get_a() == 0);
+    registers->set_a((a << 1) + carry);
+
+    registers->get_flag()->zero = false;
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
-    registers->get_flag()->carry = msb;
 
     registers->update_flag_register();
 }
@@ -236,107 +245,120 @@ auto Instruction::cpl_inst() -> void
     u8 a = ~registers->get_a();
     registers->set_a(a);
 
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = false;
+    registers->get_flag()->half_carry = true;
+    registers->get_flag()->subtract = true;
 
     registers->update_flag_register();
 }
 
 auto Instruction::bit_inst(u8 bit, u8 value) -> void
 {
-    bool is_set = (value & (1 << bit)) != 0;
-
-    registers->get_flag()->zero = !is_set;
+    registers->get_flag()->zero = ((value & (1 << bit)) == 0);
     registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = true;
 
     registers->update_flag_register();
 }
 
-auto Instruction::res_inst(u8 bit, u8 value) -> void
+auto Instruction::res_inst(u8 bit, u8 value) -> u8
 {
-    value &= ~(1 << bit);
+    return value &= ~(1 << bit);
 }
 
-auto Instruction::set_inst(u8 bit, u8 value) -> void
+auto Instruction::set_inst(u8 bit, u8 value) -> u8
 {
-    value |= (1 << bit);
+    return value |= (1 << bit);
 }
 
-auto Instruction::srl_inst(u8 value) -> void
+auto Instruction::srl_inst(u8 value) -> u8
 {
     registers->get_flag()->carry = (value & 0x01);
+
     value >>= 1;
 
     registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
-auto Instruction::rr_inst(u8 value) -> void
+auto Instruction::rr_inst(u8 value) -> u8
 {
-    bool old_carry = registers->get_flag()->carry;
+    u8 carry = registers->get_flag()->carry;
     registers->get_flag()->carry = (value & 0x01);
 
-    value = (value >> 1) | (old_carry << 1);
+    value = (value >> 1) | (carry << 7);
 
     registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
-auto Instruction::rl_inst(u8 value) -> void
+auto Instruction::rl_inst(u8 value) -> u8
 {
-    bool old_carry = registers->get_flag()->carry;
-    registers->get_flag()->carry = ((value & 0x80) != 0);
+    u8 carry = registers->get_flag()->carry;
 
-    value = (value << 1) | old_carry;
+    registers->get_flag()->carry = value & (1 << 7);
+
+    value = (value << 1) + carry;
 
     registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
-auto Instruction::rrc_inst(u8 value) -> void
+auto Instruction::rrc_inst(u8 value) -> u8
 {
-    bool lsb = (value & 0x01);
+    u8 carry = value & 0x01;
+
+    registers->get_flag()->carry = carry;
+
+    value = (value >> 1) | (carry << 7);
+
+    registers->get_flag()->zero = (value == 0);
+    registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
+
+    registers->update_flag_register();
+
+    return value;
+}
+
+auto Instruction::rlc_inst(u8 value) -> u8
+{
+    u8 carry = (value >> 7) & 0x01;
+
+    registers->get_flag()->carry = value & (1 << 7);
+
+    value = (value << 1) + carry;
+
+    registers->get_flag()->zero = (value == 0);
+    registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
+
+    registers->update_flag_register();
+
+    return value;
+}
+
+auto Instruction::sra_inst(u8 value) -> u8
+{
+    u8 lsb = value & 0x01;
+    u8 msb = value & (1 << 7);
+
     registers->get_flag()->carry = lsb;
 
-    value = (value >> 1) | (lsb << 7);
-
-    registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = false;
-
-    registers->update_flag_register();
-}
-
-auto Instruction::rlc_inst(u8 value) -> void
-{
-    bool msb = (value & 0x80);
-    registers->get_flag()->carry = msb;
-
-    value = (value << 1) | (msb >> 7);
-
-    registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = false;
-
-    registers->update_flag_register();
-}
-
-auto Instruction::sra_inst(u8 value) -> void
-{
-    bool lsb = (value & 0x01);
-    bool msb = (value & 0x80);
-
-    registers->get_flag()->carry = lsb;
     value = (value >> 1) | msb;
 
     registers->get_flag()->zero = (value == 0);
@@ -344,43 +366,49 @@ auto Instruction::sra_inst(u8 value) -> void
     registers->get_flag()->half_carry = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
-auto Instruction::sla_inst(u8 value) -> void
+auto Instruction::sla_inst(u8 value) -> u8
 {
-    bool msb = (value & 0x80);
+    registers->get_flag()->carry = value & (1 << 7);
 
-    registers->get_flag()->carry = msb;
     value <<= 1;
 
     registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
     registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
-auto Instruction::swap_inst(u8 value) -> void
+auto Instruction::swap_inst(u8 value) -> u8
 {
     value = (value >> 4) | (value << 4);
 
     registers->get_flag()->zero = (value == 0);
-    registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = false;
     registers->get_flag()->carry = false;
+    registers->get_flag()->half_carry = false;
+    registers->get_flag()->subtract = false;
 
     registers->update_flag_register();
+
+    return value;
 }
 
 auto Instruction::addhl_inst(u16 value) -> u16
 {
     u32 result = static_cast<u32>(registers->get_HL()) + value;
+
+    registers->get_flag()->carry = (result > 0xFFFF);
+    registers->get_flag()->half_carry = ((registers->get_HL() & 0x0FFF) + (value & 0x0FFF)) > 0x0FFF;
+
     u16 new_value = static_cast<u16>(result);
 
-    registers->get_flag()->zero = (new_value == 0);
     registers->get_flag()->subtract = false;
-    registers->get_flag()->half_carry = (result > 0xFF);
-    registers->get_flag()->carry = ((registers->get_a() & 0xF) + (value & 0xF) > 0xF);
 
     registers->update_flag_register();
 
@@ -419,8 +447,8 @@ auto Instruction::jp_inst(bool should_jump) -> void
     {
         u16 lsb = static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 1));
         u16 msb = static_cast<u16>(registers->get_bus()->read_byte(registers->get_PC() + 2));
-        u16 address = (msb << 8) | lsb;
-        registers->set_PC(address);
+        u16 address = lsb | (msb << 8);
+        registers->set_PC(address - 1); // Prevent inc in CPU
     }
     else
     {
@@ -656,7 +684,13 @@ auto Instruction::get_16_source(LoadSource source) -> u16
     case LoadSource::SPs8:
     {
         i8 s8 = static_cast<i8>(registers->read_next_byte());
-        return registers->get_SP() + s8;
+        u16 result = registers->get_SP() + s8;
+
+        registers->get_flag()->carry = (((registers->get_SP() ^ s8 ^ result) & 0x100) == 0x100);
+        registers->get_flag()->half_carry = (((registers->get_SP() ^ s8 ^ result) & 0x10) == 0x10);
+        registers->get_flag()->subtract = false;
+
+        return result;
     }
     default:
         throw runtime_error("Unknown source at get_16_source");

@@ -1,5 +1,34 @@
 #include "ppu.hpp"
-#include <assert.h>
+
+PPU::PPU(MemoryBus *bus_ptr, Registers *regs_ptr) : bus(bus_ptr), registers(regs_ptr)
+{
+    if (!bus || !registers)
+    {
+        throw runtime_error("Null pointer provided to PPU constructor");
+    }
+
+    // Intialization of SDL2
+    init();
+
+    // Set vars
+    control = &bus->get_memory(0xFF40);
+    stat = &bus->get_memory(0xFF41);
+    scy = &bus->get_memory(0xFF42);
+    scx = &bus->get_memory(0xFF43);
+    ly = &bus->get_memory(0xFF44);
+    lyc = &bus->get_memory(0xFF45);
+    interrupt_flag = &bus->get_memory(0xFF0F);
+
+    // Setup palettes
+    bus->palette_BGP = bus->palette;
+    fill(bus->palette_sprite.begin(), bus->palette_sprite.end(), bus->palette);
+
+    // Setup tiles
+    bus->tiles.fill(array<array<u8, 8>, 8>{});
+
+    // Setup frame buffer
+    fill(frame_buffer.begin(), frame_buffer.end(), Colour{255, 255, 255});
+};
 
 auto PPU::init() -> void
 {
@@ -49,7 +78,7 @@ auto PPU::init() -> void
     SDL_SetWindowResizable(window, SDL_TRUE);
 
     texture = SDL_CreateTexture(renderer,
-                                SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
+                                SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
                                 SCREEN_WIDTH, SCREEN_HEIGHT);
 
     if (!texture)
@@ -62,204 +91,107 @@ auto PPU::init() -> void
     }
 
     bus->write_byte(0xFF41, 0x80);
-    frame_buffer.fill(0xFF);
 }
 
-auto PPU::calc_bg(u8 row) -> void
+auto PPU::draw_scanline() -> void
 {
-    // Validate row range
-    if (row >= 144)
-    {
-        throw runtime_error("Invalidate row range at ppu calc_bg: " + to_string(static_cast<u16>(row)));
-        return; // Ignore rows outside visible range
-    }
-
-    u8 scy = bus->read_byte(0xFF42);
-    u8 scx = bus->read_byte(0xFF43);
-
-    bool use_alt_tilemap = (bus->get_memory(0xFF40) >> 3) & 1;
-    bool use_signed_tiledata = !((bus->get_memory(0xFF40) >> 4) & 1);
-
-    u16 tilemap = use_alt_tilemap ? 0x9C00 : 0x9800;
-    u16 tiledata = use_signed_tiledata ? 0x8800 : 0x8000;
-
-    u8 palette = bus->read_byte(0xFF47);
-
-    // Starting x-scroll offset within the tile
-    u8 initial_x_offset = scx & 7;
-
-    // Row and column offsets for the first visible tile
-    u8 offY = row + scy;
-    u8 tile_row = (offY / 8) * 32; // Tilemap row offset
-
-    // Render the visible 160 pixels
-    for (u8 visible_x = 0; visible_x < 160;)
-    {
-        // Get the tile address and number
-        u8 offX = scx + visible_x;                       // Horizontal offset into the map
-        u16 tile_addr = tilemap + tile_row + (offX / 8); // Tile index in the tilemap
-        u8 tile_num = bus->read_byte(tile_addr);
-
-        // Calculate the tile data address (signed or unsigned)
-        u16 tile_offset = use_signed_tiledata
-                              ? 0x800 + static_cast<i8>(tile_num) * 0x10
-                              : tile_num * 0x10;
-
-        // Get the pixel line within the tile
-        u16 line_offset = (offY % 8) * 2;
-        u8 byte1 = bus->read_byte(tiledata + tile_offset + line_offset);
-        u8 byte2 = bus->read_byte(tiledata + tile_offset + line_offset + 1);
-
-        // Render up to 8 pixels from this tile
-        for (u8 tile_pixel = initial_x_offset; tile_pixel < 8 && visible_x < 160; ++tile_pixel, ++visible_x)
-        {
-            // Extract the pixel's color value (2 bits)
-            u8 color_val = ((byte2 >> (7 - tile_pixel)) & 0x1) * 2 + ((byte1 >> (7 - tile_pixel)) & 0x1);
-
-            // Map the color value to the palette
-            u8 color_from_pal = (palette >> (2 * color_val)) & 0x3;
-
-            // Write the pixel to the framebuffer
-            frame_buffer[row * 160 + visible_x] = color_from_pal;
-        }
-
-        // Reset initial_x_offset after the first tile
-        initial_x_offset = 0;
-    }
-}
-
-auto PPU::calc_window(u8 row) -> void
-{
-    // Validate row range
-    if (row >= 144)
-    {
-        throw runtime_error("Invalidate row range at ppu calc_window: " + to_string(static_cast<u16>(row)));
-        return; // Ignore rows outside visible range
-    }
-
-    // Read control registers
-    u8 lcdc = bus->read_byte(0xFF40);
-    u8 wy = bus->read_byte(0xFF4A);     // Window Y position
-    u8 wx = bus->read_byte(0xFF4B) - 7; // Window X position
-
-    // Exit early if the window is disabled or the row is outside the window
-    if (!((lcdc >> 5) & 0x1) || row < wy)
+    if (*ly >= 144)
     {
         return;
     }
 
-    // Determine tilemap and tiledata base addresses
-    bool use_alt_tilemap = (bus->get_memory(0xFF40) >> 3) & 1;
-    bool use_signed_tiledata = !((bus->get_memory(0xFF40) >> 4) & 1);
+    u8 scanline_row[160] = {0};
 
-    u16 tilemap = use_alt_tilemap ? 0x9C00 : 0x9800;
-    u16 tiledata = use_signed_tiledata ? 0x8800 : 0x8000;
+    u16 map_offset = *control & 0x08 ? 0x1C00 : 0x1800;
+    map_offset += (((*ly + *scy) & 0xFF) >> 3) << 5;
 
-    // Calculate window's vertical offset
-    u8 offY = row - wy;
-    u16 tile_row = (offY / 8) * 32; // Offset into the tilemap for this row
+    u8 line_offset = *scx >> 3;
+    u8 x = *scx & 0x07;
+    u8 y = (*ly + *scy) & 0x07;
+    u16 pixel_offset = *ly * 160;
 
-    for (u8 visible_x = 0; visible_x < 160; ++visible_x)
+    u8 tile = bus->read_byte(map_offset + line_offset + 0x8000);
+
+    // Background
+    for (u8 i = 0; i < 160; i++)
     {
-        // Horizontal offset into the window
-        i16 offX = wx + visible_x;
-        if (offX < 0 || offX >= 160)
+        if (tile >= bus->tiles.size())
         {
-            continue; // Skip pixels that are outside the visible window
+            break;
         }
 
-        // Calculate tile address and fetch tile number
-        u16 tile_addr = tilemap + tile_row + (offX / 8);
-        u8 tile_num = bus->read_byte(tile_addr);
+        u8 colour = bus->tiles[tile][y][x];
+        scanline_row[i] = colour;
 
-        // Calculate tile data address
-        u16 tile_offset = use_signed_tiledata
-                              ? 0x800 + static_cast<i8>(tile_num) * 0x10
-                              : tile_num * 0x10;
-
-        // Fetch tile line bytes
-        u16 line_offset = (offY % 8) * 2;
-        u8 byte1 = bus->read_byte(tiledata + tile_offset + line_offset);
-        u8 byte2 = bus->read_byte(tiledata + tile_offset + line_offset + 1);
-
-        // Extract pixel color
-        u8 color_val = ((byte2 >> (7 - (offX % 8))) & 0x1) * 2 +
-                       ((byte1 >> (7 - (offX % 8))) & 0x1);
-
-        // Map color value using the background/window palette
-        u8 color_from_pal = (bus->read_byte(0xFF47) >> (2 * color_val)) & 0x3;
-
-        // Write pixel to the framebuffer
-        frame_buffer[row * 160 + visible_x] = color_from_pal;
-    }
-}
-
-auto PPU::calc_sprite(u8 row) -> void
-{
-    // Validate row range
-    if (row >= 144)
-    {
-        throw runtime_error("Invalidate row range at ppu calc_sprite: " + to_string(static_cast<u16>(row)));
-        return; // Ignore rows outside visible range
-    }
-
-    // Read control registers
-    u16 oam_start = 0xFE00;
-    u16 oam_end = 0xFE9F;
-    u8 sprite_height = (bus->read_byte(0xFF40) & 0x4) ? 16 : 8;
-
-    // Check if sprites are enabled
-    if (!(bus->read_byte(0xFF40) & 0x2))
-    {
-        return;
-    }
-
-    // Iterate through all 40 sprites in OAM
-    for (u16 oam_addr = oam_start; oam_addr <= oam_end; oam_addr += 4)
-    {
-        // Extract sprite attributes
-        u8 y_pos = bus->read_byte(oam_addr) - 16;
-        u8 x_pos = bus->read_byte(oam_addr + 1) - 8;
-        u8 tile_num = bus->read_byte(oam_addr + 2);
-        u8 flags = bus->read_byte(oam_addr + 3);
-
-        // Skip sprites outside the current scanline
-        if (row < y_pos || row >= y_pos + sprite_height)
-            continue;
-
-        // Handle flipping and palette selection
-        bool flip_x = flags & 0x20;
-        bool flip_y = flags & 0x40;
-        u16 palette_addr = (flags & 0x10) ? 0xFF49 : 0xFF48;
-
-        // Calculate the tile's base address
-        u16 tile_addr = 0x8000 + tile_num * 0x10;
-
-        // Determine the sprite line within the tile
-        u8 sprite_line = flip_y ? (sprite_height - 1 - (row - y_pos)) : (row - y_pos);
-        u8 byte1 = bus->read_byte(tile_addr + sprite_line * 2);
-        u8 byte2 = bus->read_byte(tile_addr + sprite_line * 2 + 1);
-
-        // Process the sprite's 8 horizontal pixels
-        for (u8 pixel = 0; pixel < 8; ++pixel)
+        if (pixel_offset < frame_buffer.size() && colour < 4)
         {
-            u8 bit = flip_x ? pixel : (7 - pixel);
-            u8 color_val = ((byte2 >> bit) & 0x1) * 2 + ((byte1 >> bit) & 0x1);
+            frame_buffer[pixel_offset].r = bus->palette_BGP[colour].r;
+            frame_buffer[pixel_offset].g = bus->palette_BGP[colour].g;
+            frame_buffer[pixel_offset].b = bus->palette_BGP[colour].b;
+        }
 
-            // Skip transparent pixels
-            if (color_val == 0)
+        x++;
+        if (x == 8)
+        {
+            x = 0;
+            line_offset = (line_offset + 1) & 0x1F;
+            tile = bus->read_byte(map_offset + line_offset + 0x8000);
+        }
+
+        pixel_offset++;
+    }
+
+    // Sprite
+    for (u8 i = 0; i < 40; i++)
+    {
+        Sprite sprite; // Each sprite is 4 bytes long
+        sprite.y = bus->read_byte(0xFE00 + i * 4);
+        sprite.x = bus->read_byte(0xFE01 + i * 4);
+        sprite.tile = bus->read_byte(0xFE02 + i * 4);
+        sprite.options.flags = bus->read_byte(0xFE03 + i * 4);
+
+        u8 sprite_y = sprite.y - 16;
+        u8 sprite_x = sprite.x - 8;
+
+        if (sprite_y <= *ly && (sprite_y + 8) > *ly)
+        {
+            Colour *palette = &bus->palette_sprite[sprite.options.bits.palette][0];
+            pixel_offset = *ly * 160 + sprite_x;
+
+            u8 tile_row = 0;
+            if (sprite.options.bits.vFlip)
             {
-                continue;
+                tile_row = 7 - *ly - sprite_y;
+            }
+            else
+            {
+                tile_row = *ly - sprite_y;
             }
 
-            // Get the color from the palette
-            u8 color_from_palette = (bus->read_byte(palette_addr) >> (2 * color_val)) & 0x3;
+            for (x = 0; x < 8; x++)
+            {
+                if (sprite_x + x >= 0 && sprite_x + x < 160 &&
+                    (~sprite.options.bits.render_priority || !scanline_row[sprite_x + x]))
+                {
+                    u8 colour;
+                    if (sprite.options.bits.hFlip)
+                    {
+                        colour = bus->tiles[sprite.tile][tile_row][7 - x];
+                    }
+                    else
+                    {
+                        colour = bus->tiles[sprite.tile][tile_row][x];
+                    }
 
-            // Calculate the position in the framebuffer
-            u16 x = x_pos + pixel;
-
-            // Write the color to the framebuffer
-            frame_buffer[row * 160 * x] = color_from_palette;
+                    if (colour && colour < 4)
+                    {
+                        frame_buffer[pixel_offset].r = palette[colour].r;
+                        frame_buffer[pixel_offset].g = palette[colour].g;
+                        frame_buffer[pixel_offset].b = palette[colour].b;
+                    }
+                    pixel_offset++;
+                }
+            }
         }
     }
 }
@@ -290,16 +222,7 @@ auto PPU::draw_frame() -> void
         SDL_Quit();
     }
 
-    for (u8 i = 0; i < 144 * 160; i++)
-    {
-        u8 color_index = frame_buffer[i];
-        frame_buffer_a[i * 4 + 0] = COLORS[color_index * 3 + 0]; // Red
-        frame_buffer_a[i * 4 + 1] = COLORS[color_index * 3 + 1]; // Green
-        frame_buffer_a[i * 4 + 2] = COLORS[color_index * 3 + 2]; // Blue
-        frame_buffer_a[i * 4 + 3] = 0xFF;                        // Alpha
-    }
-
-    if (SDL_UpdateTexture(texture, nullptr, frame_buffer_a.data(), SCREEN_WIDTH * 4) != 0)
+    if (SDL_UpdateTexture(texture, nullptr, frame_buffer.data(), SCREEN_WIDTH * 3) != 0)
     {
         SDL_Log("Failed to update texture: %s", SDL_GetError());
         SDL_Quit();
@@ -316,22 +239,14 @@ auto PPU::draw_frame() -> void
 
 auto PPU::step(u8 cycle) -> void
 {
+    // TODO: Delete later
+    *ly = 0x8F; // TODO: Delete later
+    // TODO: Delete later
+
     ppu_cycle += cycle;
 
-    // Read necessary registers
-    u8 stat = bus->read_byte(0xFF41);
-    u8 ly = bus->read_byte(0xFF44);
-    u8 lyc = bus->read_byte(0xFF45);
-    u8 interrupt_flag = bus->read_byte(0xFF0F);
-
-    // Check if the LCD is enabled
-    // if (!(bus->read_byte(0xFF40) & 0x80))
-    // { // Bit 7 of 0xFF40 controls LCD enable
-    //     mode = 0;
-    //     // if (ppu_cycle >= 70224) // Full frame cycle reset
-    //     //     ppu_cycle -= 70224;
-    //     return;
-    // }
+    // Delete it later
+    (*ly)++;
 
     switch (mode)
     {
@@ -340,60 +255,52 @@ auto PPU::step(u8 cycle) -> void
         {
             ppu_cycle -= 51;
             mode = 2;
-            ly++;
-            bus->write_byte(0xFF44, ly);
 
-            // Check LY == LYC coincidence
-            if (ly == lyc && (stat & 0x40)) // Bit 6 enables LYC interrupt
-            {
-                interrupt_flag |= 0x2;
-                bus->write_byte(0xFF0F, interrupt_flag);
-            }
+            (*ly)++;
+            compare_ly_lyc();
 
             // Enter V-Blank if LY reaches 144
-            if (ly == 144)
+            if (*ly == 144)
             {
                 mode = 1;
-                interrupt_flag |= 0x1; // V-Blank interrupt
-                bus->write_byte(0xFF0F, interrupt_flag);
-                if (stat & 0x10) // Bit 4 enables V-Blank interrupt
+                frame_drawn_flag = true;
+                registers->set_interrupt_flag(INTERRUPT_VBANK);
+                if (*stat & 0x10) // Bit 4 enables V-Blank interrupt
                 {
-                    interrupt_flag |= 0x2;
-                    bus->write_byte(0xFF0F, interrupt_flag);
+                    registers->set_interrupt_flag(INTERRUPT_LCD);
                 }
             }
-            else if (stat & 0x20) // Bit 5 enables OAM interrupt
+            else if (*stat & 0x20) // Bit 5 enables OAM interrupt
             {
-                interrupt_flag |= 0x2;
-                bus->write_byte(0xFF0F, interrupt_flag);
+                registers->set_interrupt_flag(INTERRUPT_LCD);
             }
 
             // Update mode in STAT register
-            bus->write_byte(0xFF41, (stat & 0xFC) | mode);
+            *stat = (*stat & 0xFC) | (mode & 3);
         }
         break;
 
     case 1: // V-Blank
-        if (ppu_cycle >= 456)
+        if (ppu_cycle >= 114)
         {
-            ppu_cycle -= 456;
-            ly++;
-            bus->write_byte(0xFF44, ly);
+            ppu_cycle -= 114;
 
-            if (ly == 153)
+            (*ly)++;
+            compare_ly_lyc();
+
+            if (*ly == 153)
             {
-                ly = 0;
+                *ly = 0;
                 mode = 2;
-                bus->write_byte(0xFF44, ly);
-                if (stat & 0x20) // Bit 5 enables OAM interrupt
+
+                // Update mode in STAT register
+                *stat = (*stat & 0xFC) | (mode & 3);
+
+                if (*stat & 0x20) // Bit 5 enables OAM interrupt
                 {
-                    interrupt_flag |= 0x2;
-                    bus->write_byte(0xFF0F, interrupt_flag);
+                    registers->set_interrupt_flag(INTERRUPT_LCD);
                 }
             }
-
-            // Update mode in STAT register
-            bus->write_byte(0xFF41, (stat & 0xFC) | mode);
         }
         break;
 
@@ -404,28 +311,25 @@ auto PPU::step(u8 cycle) -> void
             mode = 3;
 
             // Update mode in STAT register
-            bus->write_byte(0xFF41, (stat & 0xFC) | mode);
+            *stat = (*stat & 0xFC) | (mode & 3);
         }
         break;
 
-    case 3:
+    case 3: // V-RAM (Video RAM)
         if (ppu_cycle >= 43)
         {
             ppu_cycle -= 43;
             mode = 0;
 
             // Render the current scanline
-            calc_bg(ly);
-            calc_window(ly);
-            calc_sprite(ly);
+            draw_scanline();
 
             // Update mode in STAT register
-            bus->write_byte(0xFF41, (stat & 0xFC) | mode);
+            *stat = (*stat & 0xFC) | (mode & 3);
 
-            if (stat & 0x08) // Bit 3 enables H-Blank interrupt
+            if (*stat & 0x08) // Bit 3 enables H-Blank interrupt
             {
-                interrupt_flag |= 0x2;
-                bus->write_byte(0xFF0F, interrupt_flag);
+                registers->set_interrupt_flag(INTERRUPT_LCD);
             }
         }
         break;
@@ -436,23 +340,19 @@ auto PPU::step(u8 cycle) -> void
     }
 
     // Frame rendering
-    if (ly == 144 && !frame_drawn_flag && (bus->read_byte(0xFF40) & 0x80))
+    if (frame_drawn_flag)
     {
         draw_frame();
-        frame_drawn_flag = true;
-
-        frame_buffer.fill(0);
-        // bg_map_a.fill(0);
-        // win_map_a.fill(0);
-        // sprite_map_a.fill(0);  
-    }
-
-    // End of frame
-    if (ly > 153)
-    {
-        ly = 0;
-        bus->write_byte(0xFF44, ly);
         frame_drawn_flag = false;
+    }
+}
+
+auto PPU::compare_ly_lyc() -> void
+{
+    *stat = (*stat & ~0x04) | ((*lyc == *ly) ? 0x04 : 0x00);
+    if (*lyc == *ly && (*stat & 0x04))
+    {
+        registers->set_interrupt_flag(INTERRUPT_LCD);
     }
 }
 
